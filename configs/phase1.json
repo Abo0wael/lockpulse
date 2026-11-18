@@ -1,0 +1,44 @@
+{
+  "phase": 1,
+  "defaults": {
+    "interval_ms": 5,
+    "watchdog_ms": 3000,
+    "max_ms": 10000
+  },
+  "seeds": [1, 2, 3],
+  "families": {
+    "two_lock_inversion": {
+      "binary": "build/bench/two_lock_inversion",
+      "outcome": "hang",
+      "hang_kind": "deadlock",
+      "expected_exit": "watchdog_kill",
+      "params": {}
+    },
+    "lost_wakeup": {
+      "binary": "build/bench/lost_wakeup",
+      "outcome": "hang",
+      "hang_kind": "lost_wakeup",
+      "expected_exit": "watchdog_kill",
+      "params": {}
+    },
+    "high_contention": {
+      "binary": "build/bench/high_contention",
+      "outcome": "healthy",
+      "expected_exit": "exited_ok",
+      "params": {"threads": 16, "iters": 10000, "cs_us": 0}
+    },
+    "long_critical_section": {
+      "binary": "build/bench/long_critical_section",
+      "outcome": "healthy",
+      "hard_negative": true,
+      "expected_exit": "exited_ok",
+      "params": {"threads": 4, "iters": 100},
+      "watchdog_ms": 4000,
+      "_note": "cs_us omitted on purpose: the benchmark draws it from the seed in [1.0, 2.5] s"
+    }
+  },
+  "overhead": {
+    "family": "high_contention",
+    "seed": 1
+  }
+}

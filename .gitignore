@@ -1,0 +1,23 @@
+# build outputs
+build/
+
+# data: directory skeleton is tracked, contents are not
+data/raw/*/*
+!data/raw/*/.gitkeep
+data/processed/*
+!data/processed/.gitkeep
+
+# gate report (regenerated on every run; CI uploads it as an artifact)
+results/check_phase1_*.txt
+
+# python
+__pycache__/
+*.pyc
+
+# editors / OS
+.vscode/
+.idea/
+*.swp
+.DS_Store
+Thumbs.db
+desktop.ini
