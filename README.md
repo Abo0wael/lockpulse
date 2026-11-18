@@ -102,7 +102,13 @@ make overhead                                    # scripts/overhead.py -> result
 ```
 
 - **`collect.py`** uses deterministic run ids (`<family>-<config>-s<seed>`). It skips runs whose metadata exists, moves leftovers of interrupted runs to `data/raw/incomplete/`, tags each run with `split`, `config_id`, `kind` and `force`, and prints a per-family summary.
-- **The collect workflow** (`.github/workflows/collect.yml`) is the real collector. It is manual only (Actions → collect → Run workflow) and runs one parallel job per family, uploading artifacts named `lockpulse-data-<family>`. It also runs an overhead job. A final job merges everything, labels it, writes the review sample and uploads `lockpulse-data-all`. Raw Tier F `.bin` files are not uploaded (sparse 256 MiB files); their complete content is in `data/processed/tierF/*.csv`.
+- **The collect workflow** (`.github/workflows/collect.yml`) is the real collector. It is manual only (Actions → collect → Run workflow) and runs one parallel job per family, uploading artifacts named `lockpulse-data-<family>`. It also runs an overhead job. A final job merges everything, labels it, writes the review sample and uploads two artifacts:
+  - **`lockpulse-labels-and-reports`** (small): `labels.csv`, `labels_summary.txt`, `review.md`, `overhead.csv`, `overhead_runs.csv` and the per-family collect summaries. Download this one for the human gate.
+  - **`lockpulse-data-all`** (full dataset, for model training): metadata JSON, Tier P and Tier F CSVs as `.csv.gz`, and labels. pandas reads `.csv.gz` directly, and so do `ml/label.py` and `scripts/review_sample.py`.
+
+  The job summary lists every artifact's size.
+
+  Raw Tier F `.bin` files are not uploaded (sparse 256 MiB files); their complete content is in `data/processed/tierF/*.csv.gz`. `scripts/pack_data.py` gzips staged copies of the raw Tier P CSVs, so the raw files themselves are never modified. Expect roughly 180 MB compressed (~1.25 GB extracted as plain CSV) for all 780 runs, about 70 % of it from `high_contention`.
 - **`overhead.py`** runs `high_contention` and `prodcons_correct` 10 times in each of 4 modes (untraced, P, F, PF). It reports the median and IQR of `bench_ms`, the slowdown versus untraced, and the launcher/sampler CPU %, which `lp-run` reads from its own `/proc/self/stat` at the end of the run.
 
 ## Gates
@@ -140,7 +146,7 @@ Gate runs write to `data/raw/gate/` and `data/processed/gate/`, and overhead run
 data/raw/meta/<run_id>.json        run metadata                 (raw, immutable)
 data/raw/tierP/<run_id>.csv        Tier P samples               (raw, immutable)
 data/raw/tierF/<run_id>.bin        Tier F trace buffer          (raw, immutable)
-data/processed/tierF/<run_id>.csv  lp-dump output               (derived)
+data/processed/tierF/<run_id>.csv.gz  lp-dump output, gzipped (derived; gates keep plain .csv)
 data/processed/labels.csv          oracle labels                (derived)
 ```
 

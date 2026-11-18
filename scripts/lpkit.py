@@ -120,6 +120,31 @@ def dump_tierf(bin_path, csv_path):
     return p.returncode, p.stderr.strip()
 
 
+def gzip_file(src, remove_src=True):
+    """src -> src.gz (deterministic: mtime 0). Returns the .gz path."""
+    import gzip
+    import shutil
+    src = Path(src)
+    dst = src.with_name(src.name + ".gz")
+    tmp = dst.with_name(dst.name + ".tmp")
+    with open(src, "rb") as fin, open(tmp, "wb") as raw_out:
+        with gzip.GzipFile(filename="", mode="wb", compresslevel=6, fileobj=raw_out, mtime=0) as gz:
+            shutil.copyfileobj(fin, gz, 1 << 20)
+    tmp.replace(dst)
+    if remove_src:
+        src.unlink()
+    return dst
+
+
+def find_csv(path):
+    """Return path (.csv) or its .csv.gz sibling if only that exists, else None."""
+    path = Path(path)
+    if path.exists():
+        return path
+    gz = path.with_name(path.name + ".gz")
+    return gz if gz.exists() else None
+
+
 def parse_elapsed_ns(text):
     for line in (text or "").splitlines():
         if line.startswith("elapsed_ns="):

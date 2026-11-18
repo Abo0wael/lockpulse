@@ -56,6 +56,15 @@ def pick(labels, n, seed):
     return labels.loc[chosen]
 
 
+def existing_csv(path):
+    """path (.csv) if it exists, else its .csv.gz sibling, else None (pandas reads both)."""
+    path = Path(path)
+    if path.exists():
+        return path
+    gz = path.with_name(path.name + ".gz")
+    return gz if gz.exists() else None
+
+
 def code_block(text):
     return "```\n" + text + "\n```"
 
@@ -72,10 +81,10 @@ def section(row, raw, processed):
     out.append("**reason:** " + str(row["reason"]))
     out.append("")
 
-    fcsv = Path(processed) / "tierF" / (rid + ".csv")
-    pcsv = Path(raw) / "tierP" / (rid + ".csv")
+    fcsv = existing_csv(Path(processed) / "tierF" / (rid + ".csv"))
+    pcsv = existing_csv(Path(raw) / "tierP" / (rid + ".csv"))
     t0 = None
-    if fcsv.exists():
+    if fcsv is not None:
         f = pd.read_csv(fcsv, dtype={"event": str, "obj_addr": str})
         t0 = int(f["ts_ns"].min()) if len(f) else None
         tail = f.tail(15).copy()
@@ -86,7 +95,7 @@ def section(row, raw, processed):
     else:
         out.append("_Tier F CSV missing_")
     out.append("")
-    if pcsv.exists():
+    if pcsv is not None:
         p = pd.read_csv(pcsv, dtype={"state": str})
         last = p.sort_values(["tid", "ts_ns"]).groupby("tid").tail(3).copy()
         if t0 is not None:

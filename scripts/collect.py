@@ -7,7 +7,7 @@
 
 For every (family, config, seed) it runs lp-run with tier PF, tags the run
 with split / config_id / kind / force, and converts the Tier F trace with
-lp-dump into <processed>/tierF/<run_id>.csv. Run ids are deterministic
+lp-dump into <processed>/tierF/<run_id>.csv.gz. Run ids are deterministic
 (<family>-<config>-s<seed>), which makes collection resumable: a run whose
 metadata already exists is skipped (only a missing Tier F CSV is re-derived).
 Leftovers of an interrupted run (raw files without metadata) are moved to
@@ -99,9 +99,11 @@ def main(argv=None):
 
         meta = json.loads(p["meta"].read_text())
         fam["exit"][meta["exit_reason"]] += 1
-        if not p["tierF_csv"].exists() and p["tierF_bin"].exists():
+        if lpkit.find_csv(p["tierF_csv"]) is None and p["tierF_bin"].exists():
             rc, err = lpkit.dump_tierf(p["tierF_bin"], p["tierF_csv"])
-            if rc not in (0, 3):
+            if rc in (0, 3):
+                lpkit.gzip_file(p["tierF_csv"])  # derived data is stored as <run_id>.csv.gz
+            else:
                 fam["dump_fail"] += 1
                 print("  {}: lp-dump failed rc={}: {}".format(run_id, rc, err))
         print("[{}/{}] {} {} exit={} {:.0f} ms".format(i, len(specs), run_id, status, meta["exit_reason"],

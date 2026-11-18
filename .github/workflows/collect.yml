@@ -57,18 +57,20 @@ jobs:
           python3 scripts/collect.py --family "${{ matrix.family }}" --seeds "${{ inputs.seeds }}" \
             --summary-out "results/collect_${{ matrix.family }}.txt"
 
+      - name: Stage family data (CSVs gzipped)
+        if: always()
+        run: python3 scripts/pack_data.py --dest dist
+
       - name: Upload family data
         if: always()
         uses: actions/upload-artifact@v7
         with:
           name: lockpulse-data-${{ matrix.family }}
           # Raw Tier F .bin files are not uploaded (sparse 256 MiB files); the
-          # complete Tier F content is in data/processed/tierF/*.csv (lp-dump).
-          path: |
-            data/raw/meta/
-            data/raw/tierP/
-            data/processed/tierF/
-            results/collect_${{ matrix.family }}.txt
+          # complete Tier F content is in data/processed/tierF/*.csv.gz (lp-dump).
+          # Everything big is already gzipped, so the zip layer does not recompress.
+          path: dist/
+          compression-level: 0
           if-no-files-found: error
           retention-days: 30
 
@@ -108,6 +110,9 @@ jobs:
     if: always()
     runs-on: ubuntu-26.04
     timeout-minutes: 10
+    permissions:
+      contents: read
+      actions: read   # list this run's artifacts and their sizes
     steps:
       - uses: actions/checkout@v7
 
@@ -124,6 +129,20 @@ jobs:
           pattern: lockpulse-*
           merge-multiple: true
           path: .
+
+      - name: Merge per-family collect summaries
+        shell: bash
+        run: |
+          mkdir -p results
+          {
+            for f in results/collect_*.txt; do
+              [ "$f" = results/collect_summary.txt ] && continue
+              echo "### $(basename "$f" .txt)"
+              sed -n '/== collect summary/,$p' "$f"
+              echo
+            done
+          } > results/collect_summary.txt
+          cat results/collect_summary.txt
 
       - name: Label all runs
         run: python3 ml/label.py --summary results/labels_summary.txt
@@ -145,15 +164,54 @@ jobs:
           } >> "$GITHUB_STEP_SUMMARY"
           cat results/labels_summary.txt
 
-      - name: Upload merged dataset
+      - name: Upload labels and reports (small)
+        uses: actions/upload-artifact@v7
+        with:
+          name: lockpulse-labels-and-reports
+          path: |
+            data/processed/labels.csv
+            results/labels_summary.txt
+            results/review.md
+            results/overhead.csv
+            results/overhead_runs.csv
+            results/collect_*.txt
+          if-no-files-found: error
+          overwrite: true
+          retention-days: 90
+
+      - name: Upload merged dataset (for model training)
         uses: actions/upload-artifact@v7
         with:
           name: lockpulse-data-all
+          # CSVs are .csv.gz (pandas reads them directly); light zip level for the rest.
           path: |
             data/raw/meta/
             data/raw/tierP/
             data/raw/overhead/meta/
             data/processed/
             results/
+          compression-level: 1
           if-no-files-found: error
+          overwrite: true
           retention-days: 90
+
+      - name: Artifact sizes
+        if: always()
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          echo "local (uncompressed on disk):"
+          du -sh data/raw/meta data/raw/tierP data/processed results 2>/dev/null || true
+          gh api "repos/${{ github.repository }}/actions/runs/${{ github.run_id }}/artifacts?per_page=100" \
+            --jq '.artifacts[] | [.name, .size_in_bytes] | @tsv' | sort > artifact_sizes.tsv
+          {
+            echo '## Artifact sizes'
+            echo
+            echo '| artifact | size |'
+            echo '|---|---:|'
+            awk -F'\t' '{ printf "| %s | %.1f MB |\n", $1, $2 / 1e6; t += $2 } END { printf "| **total (all artifacts of this run)** | %.1f MB |\n", t / 1e6 }' artifact_sizes.tsv
+            echo
+            echo 'Download only `lockpulse-labels-and-reports` for labels, review.md and overhead tables; `lockpulse-data-all` holds the full dataset (gzipped CSVs) for model training.'
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat artifact_sizes.tsv

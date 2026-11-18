@@ -1,5 +1,6 @@
-# build outputs
+# build outputs / artifact staging
 build/
+dist/
 
 # data: directory skeleton is tracked, contents are not
 data/raw/*/*

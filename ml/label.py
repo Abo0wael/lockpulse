@@ -2,8 +2,9 @@
 """label.py - ground-truth oracle for LockPulse runs (phase 2).
 
 Inputs per run: metadata JSON (data/raw/meta/<id>.json), Tier F CSV
-(data/processed/tierF/<id>.csv, produced by lp-dump) and Tier P CSV
-(data/raw/tierP/<id>.csv). Output: data/processed/labels.csv with columns
+(data/processed/tierF/<id>.csv[.gz], produced by lp-dump) and Tier P CSV
+(data/raw/tierP/<id>.csv[.gz]; artifacts carry gzipped copies). Output:
+data/processed/labels.csv with columns
 
   run_id, family, split, config_id, seed, force, exit_reason,
   hang, t0_ns, deadlock, ambiguous, reason
@@ -241,11 +242,23 @@ def read_tierp_csv(path):
     return pd.read_csv(path, dtype={"state": str})
 
 
+def existing_csv(path):
+    """path (.csv) if it exists, else its .csv.gz sibling if that exists, else None.
+    pandas reads either form directly."""
+    path = Path(path)
+    if path.exists():
+        return path
+    gz = path.with_name(path.name + ".gz")
+    return gz if gz.exists() else None
+
+
 def ensure_tierf_csv(raw_dir, processed_dir, run_id):
-    """Return the Tier F CSV path, creating it with build/lp-dump if only the .bin exists."""
+    """Return the Tier F CSV path (.csv or .csv.gz), creating it with build/lp-dump
+    if only the .bin exists."""
     csv = Path(processed_dir) / "tierF" / (run_id + ".csv")
-    if csv.exists():
-        return csv
+    found = existing_csv(csv)
+    if found is not None:
+        return found
     binf = Path(raw_dir) / "tierF" / (run_id + ".bin")
     dump = ROOT / "build" / "lp-dump"
     if binf.exists() and dump.exists():
@@ -265,9 +278,9 @@ def label_files(raw_dir, processed_dir, run_id, config=None):
     if config is not None:
         split = config.get("families", {}).get(meta.get("family"), {}).get("split", "")
     fcsv = ensure_tierf_csv(raw_dir, processed_dir, run_id)
-    pcsv = raw_dir / "tierP" / (run_id + ".csv")
+    pcsv = existing_csv(raw_dir / "tierP" / (run_id + ".csv"))
     tierf = read_tierf_csv(fcsv) if fcsv is not None else None
-    tierp = read_tierp_csv(pcsv) if pcsv.exists() else None
+    tierp = read_tierp_csv(pcsv) if pcsv is not None else None
     return label_run(meta, tierf, tierp, split=split)
 
 
