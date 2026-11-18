@@ -19,7 +19,7 @@ jobs:
   family:
     name: collect ${{ matrix.family }}
     runs-on: ubuntu-26.04
-    timeout-minutes: 60
+    timeout-minutes: 30
     strategy:
       fail-fast: false
       matrix:
@@ -40,10 +40,12 @@ jobs:
     steps:
       - uses: actions/checkout@v7
 
-      - name: Install toolchain
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential python3-pandas
+      - name: Install toolchain (bounded, non-interactive)
+        timeout-minutes: 5
+        env:
+          DEBIAN_FRONTEND: noninteractive
+          NEEDRESTART_MODE: a
+        run: bash .github/ci-install.sh build
 
       - name: Build
         run: make all
@@ -72,14 +74,16 @@ jobs:
 
   overhead:
     runs-on: ubuntu-26.04
-    timeout-minutes: 60
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@v7
 
-      - name: Install toolchain
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y build-essential python3-pandas
+      - name: Install toolchain (bounded, non-interactive)
+        timeout-minutes: 5
+        env:
+          DEBIAN_FRONTEND: noninteractive
+          NEEDRESTART_MODE: a
+        run: bash .github/ci-install.sh build
 
       - name: Build
         run: make all
@@ -103,14 +107,16 @@ jobs:
     needs: [family, overhead]
     if: always()
     runs-on: ubuntu-26.04
-    timeout-minutes: 30
+    timeout-minutes: 10
     steps:
       - uses: actions/checkout@v7
 
-      - name: Install Python
-        run: |
-          sudo apt-get update
-          sudo apt-get install -y python3-pandas
+      - name: Install toolchain (bounded, non-interactive)
+        timeout-minutes: 5
+        env:
+          DEBIAN_FRONTEND: noninteractive
+          NEEDRESTART_MODE: a
+        run: bash .github/ci-install.sh python
 
       - name: Download all family and overhead artifacts
         uses: actions/download-artifact@v8

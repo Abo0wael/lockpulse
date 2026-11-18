@@ -51,6 +51,15 @@ def log(msg=""):
     LINES.append(msg)
 
 
+def step(msg):
+    """Announce a step before starting it, so a hang shows where it is stuck."""
+    log(">> [{}] start: {}".format(time.strftime("%H:%M:%S"), msg))
+
+
+# Direct (non-lp-run) program invocations are hard-capped: SIGKILL after 60 s.
+KILL_AFTER = ["timeout", "-s", "KILL", "60"]
+
+
 def check(cond, msg):
     if not cond:
         FAILURES.append(msg)
@@ -241,6 +250,7 @@ def main():
     log("")
 
     log("== build ==")
+    step("make all")
     b = subprocess.run(["make", "all"], cwd=str(ROOT), capture_output=True, text=True)
     log(b.stdout.strip())
     if b.stderr.strip():
@@ -254,7 +264,7 @@ def main():
     log("== PF runs ==")
     for family, fcfg in families.items():
         for seed in cfg["seeds"]:
-            log("run {} seed={} tier=PF".format(family, seed))
+            step("lp-run {} seed={} tier=PF".format(family, seed))
             r = run_lp(session, family, fcfg, defaults, seed, "PF")
             validate(r, fcfg["expected_exit"])
             runs.append(r)
@@ -266,7 +276,7 @@ def main():
     ocfg = families[ofam]
     overhead_runs = {}
     for tier in ("P", "F"):
-        log("run {} seed={} tier={}".format(ofam, oseed, tier))
+        step("lp-run {} seed={} tier={}".format(ofam, oseed, tier))
         r = run_lp(session, ofam, ocfg, defaults, oseed, tier)
         validate(r, ocfg["expected_exit"])
         runs.append(r)
@@ -274,9 +284,10 @@ def main():
     overhead_runs["PF"] = next((r for r in runs if r["family"] == ofam and r["seed"] == oseed
                                 and r["tier"] == "PF"), None)
 
-    log("run {} seed={} untraced".format(ofam, oseed))
+    step("{} seed={} untraced (timeout -s KILL 60)".format(ofam, oseed))
     t0 = time.monotonic_ns()
-    plain = subprocess.run(bench_cmd(ocfg, oseed), cwd=str(ROOT), capture_output=True, text=True, timeout=60)
+    plain = subprocess.run(KILL_AFTER + bench_cmd(ocfg, oseed), cwd=str(ROOT), capture_output=True, text=True,
+                           timeout=90)
     plain_wall_ns = time.monotonic_ns() - t0
     check(plain.returncode == 0, "untraced {} exited {}".format(ofam, plain.returncode))
     plain_elapsed = parse_elapsed_ns(plain.stdout)

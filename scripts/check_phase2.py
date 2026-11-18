@@ -52,6 +52,15 @@ def log(msg=""):
     LINES.append(msg)
 
 
+def step(msg):
+    """Announce a step before starting it, so a hang shows where it is stuck."""
+    log(">> [{}] start: {}".format(time.strftime("%H:%M:%S"), msg))
+
+
+# Direct (non-lp-run) program invocations are hard-capped: SIGKILL after 60 s.
+KILL_AFTER = ["timeout", "-s", "KILL", "60"]
+
+
 def check(cond, msg):
     if not cond:
         FAILURES.append(msg)
@@ -88,13 +97,15 @@ def write_v1_trace(path):
 
 def shim_selftest(session):
     log("== shim self-test ==")
-    plain = subprocess.run([str(SELFTEST)], capture_output=True, text=True, timeout=60)
+    step("shim_selftest untraced (timeout -s KILL 60)")
+    plain = subprocess.run(KILL_AFTER + [str(SELFTEST)], capture_output=True, text=True, timeout=90)
     check(plain.returncode == 0 and "selftest: ok" in plain.stdout,
           "selftest untraced: rc={} {}".format(plain.returncode, plain.stderr.strip()[-300:]))
 
     run_id = session + "-shim_selftest"
     cmd = [str(lpkit.LP_RUN), "--family", "shim_selftest", "--run-id", run_id, "--tier", "F",
            "--watchdog-ms", "5000", "--max-ms", "30000", "--data-dir", str(GATE_RAW), "--", str(SELFTEST)]
+    step("shim_selftest under lp-run --tier F")
     traced = subprocess.run(cmd, cwd=str(ROOT), capture_output=True, text=True, timeout=90)
     if not check(traced.returncode == 0, "lp-run selftest rc={}: {}".format(traced.returncode, traced.stderr.strip())):
         return
@@ -104,6 +115,7 @@ def shim_selftest(session):
 
     bin_path = GATE_RAW / "tierF" / (run_id + ".bin")
     csv_path = GATE_PROC / "tierF" / (run_id + ".csv")
+    step("lp-dump selftest trace")
     rc, err = lpkit.dump_tierf(bin_path, csv_path)
     if not check(rc == 0, "lp-dump selftest rc={} {}".format(rc, err)):
         return
@@ -134,6 +146,7 @@ def shim_selftest(session):
     check(not state.pending, "selftest: blocking calls left open at exit: {}".format(state.pending))
     check(not state.owner, "selftest: mutexes still owned at exit: {}".format(state.owner))
 
+    step("lp-dump --info")
     info = subprocess.run([str(lpkit.LP_DUMP), "--info", str(bin_path)], capture_output=True, text=True)
     kv = dict(l.split("=", 1) for l in info.stdout.splitlines() if "=" in l)
     log("  symbol resolution:")
@@ -151,6 +164,7 @@ def shim_selftest(session):
     with tempfile.TemporaryDirectory() as td:
         v1 = Path(td) / "v1.bin"
         write_v1_trace(v1)
+        step("lp-dump on a schema-v1 trace")
         d = subprocess.run([str(lpkit.LP_DUMP), str(v1)], capture_output=True, text=True)
         rows = d.stdout.strip().splitlines()
         check(d.returncode == 0 and len(rows) == 3 and rows[1].split(",")[2] == "MUTEX_REQ"
@@ -168,6 +182,7 @@ def family_runs(session, cfg):
     for spec in lpkit.iter_specs(cfg, config_ids=["c1"], seeds=[1]):
         run_id = lpkit.run_id_for(spec["family"], spec["config_id"], spec["seed"], prefix=session + "-")
         p = lpkit.paths(GATE_RAW, GATE_PROC, run_id)
+        step("lp-run {} {} seed {} tier=PF".format(spec["family"], spec["config_id"], spec["seed"]))
         try:
             proc = lpkit.run_lp(spec, run_id, GATE_RAW, tier="PF")
         except subprocess.TimeoutExpired:
@@ -214,6 +229,7 @@ def family_runs(session, cfg):
 
 def unit_tests():
     log("== oracle unit tests (ml/tests) ==")
+    step("python3 -m unittest discover -s ml/tests")
     p = subprocess.run([sys.executable, "-m", "unittest", "discover", "-s", "ml/tests", "-v"],
                        cwd=str(ROOT), capture_output=True, text=True, timeout=300)
     tail = (p.stdout + p.stderr).strip().splitlines()[-6:]
@@ -232,6 +248,7 @@ def main():
     log("")
 
     log("== build ==")
+    step("make all")
     b = lpkit.make_all()
     log(b.stdout.strip())
     if b.stderr.strip():

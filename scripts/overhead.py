@@ -36,9 +36,10 @@ import lpkit  # noqa: E402
 
 
 def run_untraced(spec):
-    argv = lpkit.bench_argv(spec["binary"], spec["params"], spec["seed"])
+    # direct invocation, not under lp-run: hard-capped with SIGKILL after 60 s
+    argv = ["timeout", "-s", "KILL", "60"] + lpkit.bench_argv(spec["binary"], spec["params"], spec["seed"])
     t0 = time.monotonic_ns()
-    p = subprocess.run(argv, cwd=str(lpkit.ROOT), capture_output=True, text=True, timeout=120)
+    p = subprocess.run(argv, cwd=str(lpkit.ROOT), capture_output=True, text=True, timeout=90)
     wall_ns = time.monotonic_ns() - t0
     return p.returncode, lpkit.parse_elapsed_ns(p.stdout), wall_ns / 1e6, None, None
 
