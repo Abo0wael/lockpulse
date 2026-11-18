@@ -1,0 +1,177 @@
+{
+  "phase": 2,
+  "_doc": [
+    "13 families x 4 configs x 15 seeds = 780 runs, all with --tier PF.",
+    "split follows the guide's table; all runs of a family stay in its split.",
+    "Hang families: c1-c3 use --force 1 (bug guaranteed), c4 uses --force 0 (scheduler decides).",
+    "c1 of every family is the one check-phase2 runs (seed 1).",
+    "params map to benchmark flags: key cs_us -> --cs-us etc.; see each bench/*.c header for meaning.",
+    "watchdog_ms is 3000 everywhere except long_critical_section (see its _watchdog_note)."
+  ],
+  "defaults": {
+    "interval_ms": 5,
+    "watchdog_ms": 3000,
+    "max_ms": 6000
+  },
+  "seeds": {"first": 1, "last": 15},
+  "families": {
+    "two_lock_inversion": {
+      "binary": "build/bench/two_lock_inversion",
+      "split": "train",
+      "kind": "hang",
+      "hang_type": "deadlock",
+      "configs": [
+        {"id": "c1", "params": {"threads": 2, "cs_us": 0,   "work_ms": 400,  "rate": 200, "force": 1}},
+        {"id": "c2", "params": {"threads": 4, "cs_us": 100, "work_ms": 800,  "rate": 500, "force": 1}},
+        {"id": "c3", "params": {"threads": 8, "cs_us": 50,  "work_ms": 1200, "rate": 100, "force": 1}},
+        {"id": "c4", "params": {"threads": 2, "cs_us": 300, "work_ms": 400,  "rate": 200, "iters": 300, "force": 0}}
+      ]
+    },
+    "three_thread_cycle": {
+      "binary": "build/bench/three_thread_cycle",
+      "split": "validation",
+      "kind": "hang",
+      "hang_type": "deadlock",
+      "configs": [
+        {"id": "c1", "params": {"threads": 3, "cs_us": 0,   "work_ms": 400,  "rate": 200, "force": 1}},
+        {"id": "c2", "params": {"threads": 4, "cs_us": 100, "work_ms": 800,  "rate": 500, "force": 1}},
+        {"id": "c3", "params": {"threads": 6, "cs_us": 50,  "work_ms": 1200, "rate": 100, "force": 1}},
+        {"id": "c4", "params": {"threads": 3, "cs_us": 300, "work_ms": 400,  "rate": 200, "iters": 300, "force": 0}}
+      ]
+    },
+    "dining_philosophers": {
+      "binary": "build/bench/dining_philosophers",
+      "split": "test",
+      "kind": "hang",
+      "hang_type": "deadlock",
+      "configs": [
+        {"id": "c1", "params": {"threads": 5, "cs_us": 0,   "work_ms": 400,  "rate": 200, "force": 1}},
+        {"id": "c2", "params": {"threads": 3, "cs_us": 100, "work_ms": 800,  "rate": 500, "force": 1}},
+        {"id": "c3", "params": {"threads": 8, "cs_us": 50,  "work_ms": 1200, "rate": 100, "force": 1}},
+        {"id": "c4", "params": {"threads": 5, "cs_us": 300, "work_ms": 400,  "rate": 200, "iters": 200, "force": 0}}
+      ]
+    },
+    "lost_wakeup": {
+      "binary": "build/bench/lost_wakeup",
+      "split": "train",
+      "kind": "hang",
+      "hang_type": "lost_wakeup",
+      "configs": [
+        {"id": "c1", "params": {"threads": 2, "cs_us": 0,   "work_ms": 400,  "rate": 200, "force": 1}},
+        {"id": "c2", "params": {"threads": 4, "cs_us": 100, "work_ms": 800,  "rate": 500, "force": 1}},
+        {"id": "c3", "params": {"threads": 8, "cs_us": 50,  "work_ms": 1200, "rate": 100, "force": 1}},
+        {"id": "c4", "params": {"threads": 3, "cs_us": 50,  "work_ms": 300,  "rate": 200, "force": 0}}
+      ]
+    },
+    "prodcons_missing_signal": {
+      "binary": "build/bench/prodcons_missing_signal",
+      "split": "train",
+      "kind": "hang",
+      "hang_type": "missing_signal",
+      "configs": [
+        {"id": "c1", "params": {"threads": 2, "cs_us": 50,  "work_ms": 400, "rate": 500,  "force": 1}},
+        {"id": "c2", "params": {"threads": 4, "cs_us": 100, "work_ms": 800, "rate": 500,  "force": 1}},
+        {"id": "c3", "params": {"threads": 8, "cs_us": 20,  "work_ms": 800, "rate": 1000, "force": 1}},
+        {"id": "c4", "params": {"threads": 3, "cs_us": 400, "work_ms": 400, "rate": 500,  "force": 0}}
+      ]
+    },
+    "barrier_mismatch": {
+      "binary": "build/bench/barrier_mismatch",
+      "split": "validation",
+      "kind": "hang",
+      "hang_type": "barrier",
+      "configs": [
+        {"id": "c1", "params": {"threads": 4, "cs_us": 0,   "work_ms": 600,  "rate": 200, "iters": 40, "force": 1}},
+        {"id": "c2", "params": {"threads": 2, "cs_us": 0,   "work_ms": 800,  "rate": 500, "iters": 20, "force": 1}},
+        {"id": "c3", "params": {"threads": 8, "cs_us": 0,   "work_ms": 1200, "rate": 100, "iters": 60, "force": 1}},
+        {"id": "c4", "params": {"threads": 4, "cs_us": 200, "work_ms": 600,  "rate": 200, "iters": 40, "force": 0}}
+      ]
+    },
+    "sem_never_posted": {
+      "binary": "build/bench/sem_never_posted",
+      "split": "test",
+      "kind": "hang",
+      "hang_type": "semaphore",
+      "configs": [
+        {"id": "c1", "params": {"threads": 3, "cs_us": 100, "work_ms": 600,  "rate": 0, "iters": 30, "force": 1}},
+        {"id": "c2", "params": {"threads": 2, "cs_us": 50,  "work_ms": 800,  "rate": 0, "iters": 40, "force": 1}},
+        {"id": "c3", "params": {"threads": 6, "cs_us": 200, "work_ms": 1200, "rate": 0, "iters": 20, "force": 1}},
+        {"id": "c4", "params": {"threads": 4, "cs_us": 800, "work_ms": 600,  "rate": 0, "iters": 30, "force": 0}}
+      ]
+    },
+    "high_contention": {
+      "binary": "build/bench/high_contention",
+      "split": "train",
+      "kind": "healthy",
+      "configs": [
+        {"id": "c1", "params": {"threads": 16, "cs_us": 0,  "work_ms": 1500, "rate": 20, "iters": 300}},
+        {"id": "c2", "params": {"threads": 8,  "cs_us": 5,  "work_ms": 2000, "rate": 10, "iters": 200}},
+        {"id": "c3", "params": {"threads": 12, "cs_us": 1,  "work_ms": 2500, "rate": 20, "iters": 300}},
+        {"id": "c4", "params": {"threads": 4,  "cs_us": 20, "work_ms": 3000, "rate": 5,  "iters": 200}}
+      ]
+    },
+    "long_critical_section": {
+      "binary": "build/bench/long_critical_section",
+      "split": "train",
+      "kind": "healthy",
+      "watchdog_ms": 4000,
+      "_watchdog_note": "the holder legitimately produces no progress event for up to 2.5 s (seeded hold); 4 s keeps a margin above that on loaded CI runners. No hang family uses this value.",
+      "configs": [
+        {"id": "c1", "params": {"threads": 4, "cs_us": 0,       "work_ms": 400, "rate": 200}},
+        {"id": "c2", "params": {"threads": 8, "cs_us": 0,       "work_ms": 600, "rate": 100}},
+        {"id": "c3", "params": {"threads": 2, "cs_us": 0,       "work_ms": 300, "rate": 500}},
+        {"id": "c4", "params": {"threads": 6, "cs_us": 2000000, "work_ms": 400, "rate": 200}}
+      ]
+    },
+    "consistent_lock_order": {
+      "binary": "build/bench/consistent_lock_order",
+      "split": "validation",
+      "kind": "healthy",
+      "configs": [
+        {"id": "c1", "params": {"threads": 8,  "cs_us": 20,  "work_ms": 1500, "rate": 300, "iters": 8}},
+        {"id": "c2", "params": {"threads": 4,  "cs_us": 50,  "work_ms": 2000, "rate": 300, "iters": 4}},
+        {"id": "c3", "params": {"threads": 16, "cs_us": 10,  "work_ms": 2000, "rate": 200, "iters": 16}},
+        {"id": "c4", "params": {"threads": 8,  "cs_us": 100, "work_ms": 2500, "rate": 100, "iters": 3}}
+      ]
+    },
+    "sleeping_workers": {
+      "binary": "build/bench/sleeping_workers",
+      "split": "train",
+      "kind": "healthy",
+      "configs": [
+        {"id": "c1", "params": {"threads": 8,  "cs_us": 20, "work_ms": 500, "rate": 200}},
+        {"id": "c2", "params": {"threads": 4,  "cs_us": 50, "work_ms": 700, "rate": 100}},
+        {"id": "c3", "params": {"threads": 16, "cs_us": 10, "work_ms": 400, "rate": 300}},
+        {"id": "c4", "params": {"threads": 2,  "cs_us": 20, "work_ms": 800, "rate": 200}}
+      ]
+    },
+    "prodcons_correct": {
+      "binary": "build/bench/prodcons_correct",
+      "split": "validation",
+      "kind": "healthy",
+      "configs": [
+        {"id": "c1", "params": {"threads": 2, "cs_us": 50,  "work_ms": 2000, "rate": 500}},
+        {"id": "c2", "params": {"threads": 4, "cs_us": 100, "work_ms": 1500, "rate": 1000}},
+        {"id": "c3", "params": {"threads": 8, "cs_us": 20,  "work_ms": 1500, "rate": 2000}},
+        {"id": "c4", "params": {"threads": 3, "cs_us": 400, "work_ms": 3000, "rate": 200}}
+      ]
+    },
+    "blocked_on_io": {
+      "binary": "build/bench/blocked_on_io",
+      "split": "test",
+      "kind": "healthy",
+      "configs": [
+        {"id": "c1", "params": {"threads": 4, "cs_us": 20,  "work_ms": 1000, "rate": 200}},
+        {"id": "c2", "params": {"threads": 2, "cs_us": 50,  "work_ms": 1200, "rate": 100}},
+        {"id": "c3", "params": {"threads": 8, "cs_us": 10,  "work_ms": 800,  "rate": 400}},
+        {"id": "c4", "params": {"threads": 4, "cs_us": 200, "work_ms": 1500, "rate": 500}}
+      ]
+    }
+  },
+  "overhead": {
+    "families": {"high_contention": "c1", "prodcons_correct": "c1"},
+    "reps": 10,
+    "seed": 1,
+    "modes": ["untraced", "P", "F", "PF"]
+  }
+}
