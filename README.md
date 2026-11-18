@@ -77,7 +77,7 @@ Seeds drive start offsets and work jitter, so different seeds give genuinely dif
 | `prodcons_missing_signal` | train | hang | The last item is put without a signal, after all consumers are waiting. |
 | `barrier_mismatch` | validation | hang | An N-party barrier, but one thread leaves early. |
 | `sem_never_posted` | test | hang | The poster exits before posting all items; workers block in `sem_wait`. |
-| `high_contention` | train | healthy | 16 threads hammer one mutex in bursts for 1.5–3 s. |
+| `high_contention` | train | healthy | 4–16 threads share one mutex at ~90 % utilisation for 1.5–3 s, with per-iteration think time; about 50k Tier F events per run. |
 | `long_critical_section` | train | healthy, hard negative | One thread busy-holds a lock for 1.0–2.5 s while the others block. |
 | `consistent_lock_order` | validation | healthy | 2–3 of L locks are always taken in the global order. |
 | `sleeping_workers` | train | healthy, hard negative | All threads `nanosleep` 1–2 s between two work phases. |
@@ -108,7 +108,7 @@ make overhead                                    # scripts/overhead.py -> result
 
   The job summary lists every artifact's size.
 
-  Raw Tier F `.bin` files are not uploaded (sparse 256 MiB files); their complete content is in `data/processed/tierF/*.csv.gz`. `scripts/pack_data.py` gzips staged copies of the raw Tier P CSVs, so the raw files themselves are never modified. Expect roughly 180 MB compressed (~1.25 GB extracted as plain CSV) for all 780 runs, about 70 % of it from `high_contention`.
+  Raw Tier F `.bin` files are not uploaded (sparse 256 MiB files); their complete content is in `data/processed/tierF/*.csv.gz`. `scripts/pack_data.py` gzips staged copies of the raw Tier P CSVs, so the raw files themselves are never modified. Expect roughly 75 MB compressed (~530 MB as plain CSV) for all 780 runs. This is an upper bound estimated from the configs; `high_contention` (~25 MB gz), `consistent_lock_order` (~14 MB) and `prodcons_correct` (~10 MB) are the largest.
 - **`overhead.py`** runs `high_contention` and `prodcons_correct` 10 times in each of 4 modes (untraced, P, F, PF). It reports the median and IQR of `bench_ms`, the slowdown versus untraced, and the launcher/sampler CPU %, which `lp-run` reads from its own `/proc/self/stat` at the end of the run.
 
 ## Gates

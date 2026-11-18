@@ -103,11 +103,12 @@
       "binary": "build/bench/high_contention",
       "split": "train",
       "kind": "healthy",
+      "_note": "~16.7k lock operations (~50k Tier F events) per run; rate = lock ops/s/thread with per-iteration think time; mutex utilisation threads*rate*cs ~= 0.9 keeps several threads queued; iters caps ops per thread at ~4x the expected count.",
       "configs": [
-        {"id": "c1", "params": {"threads": 16, "cs_us": 0,  "work_ms": 1500, "rate": 20, "iters": 300}},
-        {"id": "c2", "params": {"threads": 8,  "cs_us": 5,  "work_ms": 2000, "rate": 10, "iters": 200}},
-        {"id": "c3", "params": {"threads": 12, "cs_us": 1,  "work_ms": 2500, "rate": 20, "iters": 300}},
-        {"id": "c4", "params": {"threads": 4,  "cs_us": 20, "work_ms": 3000, "rate": 5,  "iters": 200}}
+        {"id": "c1", "params": {"threads": 16, "cs_us": 80, "work_ms": 1500, "rate": 700, "iters": 4000}},
+        {"id": "c2", "params": {"threads": 8, "cs_us": 110, "work_ms": 2000, "rate": 1000, "iters": 8000}},
+        {"id": "c3", "params": {"threads": 12, "cs_us": 140, "work_ms": 2500, "rate": 550, "iters": 5500}},
+        {"id": "c4", "params": {"threads": 4, "cs_us": 160, "work_ms": 3000, "rate": 1400, "iters": 16800}}
       ]
     },
     "long_critical_section": {

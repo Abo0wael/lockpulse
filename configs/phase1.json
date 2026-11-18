@@ -31,10 +31,10 @@
       "expected_exit": "exited_ok",
       "params": {
         "threads": 16,
-        "cs_us": 0,
+        "cs_us": 80,
         "work_ms": 1500,
-        "rate": 20,
-        "iters": 300
+        "rate": 700,
+        "iters": 4000
       }
     },
     "long_critical_section": {

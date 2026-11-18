@@ -3,16 +3,21 @@
  * Expected outcome: HEALTHY - completes and exits 0 (hard negative: many
  *                   threads constantly blocked in futex on one mutex).
  * Structure:        N = --threads workers (default 16) start together at a
- *                   barrier, then repeat bursts until --work-ms (+-20 %, seeded)
- *                   has elapsed: a burst is --iters lock / increment / unlock
- *                   rounds on ONE shared mutex with a --cs-us critical section,
- *                   followed by busy think time of 1/--rate s (bursts per second).
+ *                   barrier, then loop until --work-ms (+-20 %, seeded) has
+ *                   elapsed: lock ONE shared mutex, increment, --cs-us of busy
+ *                   work (+-50 %), unlock, then busy think time of 1/--rate s
+ *                   (+-50 %) per iteration. --iters > 0 caps the operations per
+ *                   thread (safety bound for the Tier F budget).
+ * Contention:       mutex utilisation U ~= threads * rate * cs. Configs keep
+ *                   U ~= 0.9, so the mutex is busy almost all the time and
+ *                   several threads are queued on it at any moment.
  * Forcing:          none needed; the start barrier only aligns the threads.
- * Duration:         ~work_ms (1-4 s in configs); progress every burst.
- * Tier F budget:    3 records per round; keep iters*rate*work_ms/1000 <= ~40000
- *                   per thread (131072 records per thread available).
- * Check:            counter == total rounds of all threads, else exit 4.
- * Defaults:         threads 16, cs_us 0, work_ms 2000, rate 20, iters 300.
+ * Duration:         ~work_ms (1.2-3.6 s in configs); progress on every operation.
+ * Tier F budget:    3 records per operation; configs target ~16.7k operations
+ *                   (~50k events) per run, i.e. threads*rate*work_ms/1000.
+ * Check:            counter == total operations of all threads, else exit 4.
+ * Defaults:         threads 16, cs_us 80, work_ms 1500, rate 700 (ops/s/thread),
+ *                   iters 0 (no cap).
  */
 #ifndef _GNU_SOURCE
 #define _GNU_SOURCE
@@ -31,22 +36,20 @@ static void *worker(void *arg)
     struct bench_thread *t = arg;
     bench_barrier_wait(&start_line);
     bench_start_offset(&t->rng);
-    while (bench_now_ns() < deadline_ns) {
-        for (long i = 0; i < A.iters; i++) {
-            bench_check(pthread_mutex_lock(&counter_lock), "lock");
-            counter++;
-            bench_cs(&t->rng, A.cs_us);
-            bench_check(pthread_mutex_unlock(&counter_lock), "unlock");
-            t->ops++;
-        }
-        bench_think(&t->rng, A.rate > 0 ? A.rate : 20);
+    while (bench_now_ns() < deadline_ns && (A.iters <= 0 || t->ops < (uint64_t)A.iters)) {
+        bench_check(pthread_mutex_lock(&counter_lock), "lock");
+        counter++;
+        bench_cs(&t->rng, A.cs_us);
+        bench_check(pthread_mutex_unlock(&counter_lock), "unlock");
+        t->ops++;
+        bench_think(&t->rng, A.rate > 0 ? A.rate : 700); /* per-iteration think time */
     }
     return NULL;
 }
 
 int main(int argc, char **argv)
 {
-    A = (struct bench_args){.threads = 16, .cs_us = 0, .work_ms = 2000, .rate = 20, .iters = 300,
+    A = (struct bench_args){.threads = 16, .cs_us = 80, .work_ms = 1500, .rate = 700, .iters = 0,
                             .force = 0, .seed = 1};
     bench_parse(argc, argv, &A);
     bench_require_threads("high_contention", &A, 1);
