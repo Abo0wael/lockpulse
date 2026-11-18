@@ -66,6 +66,7 @@ int lp_tb_create(const char *path, uint32_t max_threads, uint32_t records_per_th
     atomic_store_explicit(&h->overflow, 0, memory_order_relaxed);
     atomic_store_explicit(&h->dropped_records, 0, memory_order_relaxed);
     h->created_ns = (uint64_t)ts.tv_sec * 1000000000ull + (uint64_t)ts.tv_nsec;
+    memset(h->resolve_how, 0, sizeof h->resolve_how); /* filled in by the shim */
 
     /* Magic last: a reader that sees the magic sees a complete header. */
     atomic_thread_fence(memory_order_release);
@@ -112,7 +113,9 @@ int lp_tb_map(const char *path, int writable, struct lp_tracebuf *tb)
     int rc = 0;
     if (memcmp(h->magic, LP_MAGIC, 4) != 0) {
         rc = -EBADMSG;
-    } else if (h->schema_version != LP_SCHEMA_VERSION || h->header_size != LP_HEADER_SIZE ||
+    } else if ((writable ? h->schema_version != LP_SCHEMA_VERSION
+                         : (h->schema_version < LP_SCHEMA_MIN_READ || h->schema_version > LP_SCHEMA_VERSION)) ||
+               h->header_size != LP_HEADER_SIZE ||
                h->record_size != sizeof(struct lp_record) || h->max_threads == 0 ||
                h->records_per_thread == 0 ||
                h->region_size != (uint64_t)LP_REGION_HDR_SIZE +
@@ -148,16 +151,35 @@ const char *lp_event_name(uint16_t event)
     case LP_EV_MUTEX_REL: return "MUTEX_REL";
     case LP_EV_MUTEX_TRYLOCK_FAIL: return "MUTEX_TRYLOCK_FAIL";
     case LP_EV_ERROR: return "ERROR";
-    case LP_EV_COND_WAIT_REQ: return "COND_WAIT_REQ";
-    case LP_EV_COND_WAIT_RET: return "COND_WAIT_RET";
-    case LP_EV_COND_TIMEDWAIT_REQ: return "COND_TIMEDWAIT_REQ";
+    case LP_EV_COND_WAIT_ENTER: return "COND_WAIT_ENTER";
+    case LP_EV_COND_WAIT_EXIT: return "COND_WAIT_EXIT";
     case LP_EV_COND_SIGNAL: return "COND_SIGNAL";
     case LP_EV_COND_BROADCAST: return "COND_BROADCAST";
-    case LP_EV_SEM_WAIT_REQ: return "SEM_WAIT_REQ";
-    case LP_EV_SEM_WAIT_RET: return "SEM_WAIT_RET";
+    case LP_EV_SEM_WAIT_ENTER: return "SEM_WAIT_ENTER";
+    case LP_EV_SEM_WAIT_EXIT: return "SEM_WAIT_EXIT";
     case LP_EV_SEM_POST: return "SEM_POST";
-    case LP_EV_BARRIER_REQ: return "BARRIER_REQ";
-    case LP_EV_BARRIER_RET: return "BARRIER_RET";
+    case LP_EV_SEM_TRYWAIT_FAIL: return "SEM_TRYWAIT_FAIL";
+    case LP_EV_BARRIER_ENTER: return "BARRIER_ENTER";
+    case LP_EV_BARRIER_EXIT: return "BARRIER_EXIT";
     default: return NULL;
     }
+}
+
+const char *lp_fn_name(unsigned fn)
+{
+    static const char *const names[LP_FN_COUNT] = {
+        [LP_FN_MUTEX_LOCK] = "pthread_mutex_lock",
+        [LP_FN_MUTEX_TRYLOCK] = "pthread_mutex_trylock",
+        [LP_FN_MUTEX_UNLOCK] = "pthread_mutex_unlock",
+        [LP_FN_COND_WAIT] = "pthread_cond_wait",
+        [LP_FN_COND_TIMEDWAIT] = "pthread_cond_timedwait",
+        [LP_FN_COND_SIGNAL] = "pthread_cond_signal",
+        [LP_FN_COND_BROADCAST] = "pthread_cond_broadcast",
+        [LP_FN_SEM_WAIT] = "sem_wait",
+        [LP_FN_SEM_TIMEDWAIT] = "sem_timedwait",
+        [LP_FN_SEM_TRYWAIT] = "sem_trywait",
+        [LP_FN_SEM_POST] = "sem_post",
+        [LP_FN_BARRIER_WAIT] = "pthread_barrier_wait",
+    };
+    return fn < LP_FN_COUNT ? names[fn] : NULL;
 }
