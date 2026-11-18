@@ -19,6 +19,10 @@ Full specification: docs/LockPulse_Guide.md — read it before any non-trivial c
   into the shim with a thread-local flag; preserve errno.
 - Versioned glibc symbols are resolved with dlvsym (pthread_cond_* -> GLIBC_2.3.2).
 - Benchmarks force interleavings with barriers/semaphores, never with sleeps.
+- Never wait on a barrier, condvar (other than with its own mutex), semaphore or join while
+  holding a mutex, unless that hang is the family's intended bug.
+- Overhead is measured in fixed-work mode (fixed --iters, --work-ms 0, --rate 0); the
+  time-bounded mode is for data collection only.
 - Healthy families run 1-4 s and never go 3 s without a progress event.
 - Data under data/raw/ is immutable once written; derived data goes to data/processed/.
   Gate runs use data/raw/gate/ and data/processed/gate/; overhead runs data/raw/overhead/.

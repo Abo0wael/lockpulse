@@ -15,6 +15,11 @@
  * Duration:         ~work_ms (1.2-3.6 s in configs); progress on every operation.
  * Tier F budget:    3 records per operation; configs target ~16.7k operations
  *                   (~50k events) per run, i.e. threads*rate*work_ms/1000.
+ * Fixed-work mode:  --work-ms 0 --rate 0 --iters N (used for overhead runs): no
+ *                   time limit and no think time; every thread does exactly N
+ *                   operations, so elapsed time and ops/s measure tracing cost.
+ *                   The time-bounded mode above is the one used for collection.
+ * Output:           "ops=<total lock operations>" and "ops_per_s=<...>".
  * Check:            counter == total operations of all threads, else exit 4.
  * Defaults:         threads 16, cs_us 80, work_ms 1500, rate 700 (ops/s/thread),
  *                   iters 0 (no cap).
@@ -36,13 +41,13 @@ static void *worker(void *arg)
     struct bench_thread *t = arg;
     bench_barrier_wait(&start_line);
     bench_start_offset(&t->rng);
-    while (bench_now_ns() < deadline_ns && (A.iters <= 0 || t->ops < (uint64_t)A.iters)) {
+    while ((A.work_ms <= 0 || bench_now_ns() < deadline_ns) && (A.iters <= 0 || t->ops < (uint64_t)A.iters)) {
         bench_check(pthread_mutex_lock(&counter_lock), "lock");
         counter++;
         bench_cs(&t->rng, A.cs_us);
         bench_check(pthread_mutex_unlock(&counter_lock), "unlock");
         t->ops++;
-        bench_think(&t->rng, A.rate > 0 ? A.rate : 700); /* per-iteration think time */
+        bench_think(&t->rng, A.rate); /* per-iteration think time; rate 0 = none */
     }
     return NULL;
 }
@@ -53,6 +58,10 @@ int main(int argc, char **argv)
                             .force = 0, .seed = 1};
     bench_parse(argc, argv, &A);
     bench_require_threads("high_contention", &A, 1);
+    if (A.work_ms <= 0 && A.iters <= 0) {
+        fprintf(stderr, "high_contention: --work-ms 0 (fixed-work mode) needs --iters > 0\n");
+        return 2;
+    }
     bench_print_args("high_contention", &A);
 
     uint64_t rng = bench_thread_rng(A.seed, 1000);
@@ -74,7 +83,9 @@ int main(int argc, char **argv)
                 (unsigned long long)expected);
         return 4;
     }
+    double secs = (double)(bench_now_ns() - t0) / 1e9;
     printf("high_contention: counter=%llu\n", (unsigned long long)counter);
+    printf("ops=%llu\nops_per_s=%.0f\n", (unsigned long long)counter, secs > 0 ? (double)counter / secs : 0.0);
     bench_finish("high_contention", t0);
     free(th);
     free(ts);

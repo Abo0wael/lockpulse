@@ -4,12 +4,16 @@
  *                   1-2.5 s it looks like a hang from outside: one thread is
  *                   running, all others are blocked in futex on the same mutex,
  *                   and no lock is acquired or released.
- * Structure:        lock phase on mutex M (--work-ms, --cs-us, --rate), then the
- *                   holder (thread 0) locks M BEFORE arriving at a barrier of all
- *                   threads; waiters pass the barrier and call lock(M), so they
- *                   always find it held. The holder busy-loops (real CPU work,
- *                   never sleep) for the hold time, then releases. A final lock
- *                   phase of work_ms/2 follows.
+ * Structure:        lock phase on mutex M (--work-ms, --cs-us, --rate); then ALL
+ *                   threads meet at a barrier while holding nothing. After it the
+ *                   holder (thread 0) locks M and announces "held" with one
+ *                   sem_post per waiter; each waiter sem_waits (holding nothing)
+ *                   and only then calls lock(M), so it always finds M held. The
+ *                   holder busy-loops (real CPU work, never sleep) for the hold
+ *                   time, then releases. A final lock phase of work_ms/2 follows.
+ *                   (Phase-2 fix: the holder used to lock M before the barrier,
+ *                   while waiters still needed M in their lock phase -> a
+ *                   mutex+barrier deadlock.)
  * Hold time:        seeded uniform in [1.0, 2.5] s. The guide says 1-3 s; it is
  *                   capped at 2.5 s because a healthy family must never go 3 s
  *                   without a progress event (watchdog). --cs-us > 0 sets the hold
@@ -23,12 +27,15 @@
 #define _GNU_SOURCE
 #endif
 
+#include <semaphore.h>
+
 #include "bench_common.h"
 
 #define MAX_HOLD_US 2500000L
 
 static pthread_mutex_t m = PTHREAD_MUTEX_INITIALIZER;
-static pthread_barrier_t holder_has_lock;
+static pthread_barrier_t phase_done;
+static sem_t held; /* posted threads-1 times by the holder once it owns M */
 static uint64_t counter, waiter_rounds;
 static long hold_us, phase_cs_us;
 static struct bench_args A;
@@ -39,14 +46,26 @@ static void *worker(void *arg)
     bench_start_offset(&t->rng);
     bench_lock_phase(&m, &counter, A.work_ms, phase_cs_us, A.rate, &t->rng);
 
+    bench_barrier_wait(&phase_done); /* everyone arrives holding nothing */
+
     if (t->idx == 0) {
         bench_check(pthread_mutex_lock(&m), "holder lock");
-        bench_barrier_wait(&holder_has_lock);
+        for (long i = 1; i < A.threads; i++) {
+            if (sem_post(&held) != 0) {
+                perror("sem_post");
+                exit(3);
+            }
+        }
         bench_sink = bench_busy_ns((uint64_t)hold_us * 1000ull); /* the long critical section */
         bench_check(pthread_mutex_unlock(&m), "holder unlock");
     } else {
-        bench_barrier_wait(&holder_has_lock);
-        bench_check(pthread_mutex_lock(&m), "waiter lock"); /* blocks until the holder releases */
+        while (sem_wait(&held) != 0) { /* holding nothing while waiting */
+            if (errno != EINTR) {
+                perror("sem_wait");
+                exit(3);
+            }
+        }
+        bench_check(pthread_mutex_lock(&m), "waiter lock"); /* M is held: blocks until release */
         waiter_rounds++;
         bench_check(pthread_mutex_unlock(&m), "waiter unlock");
     }
@@ -71,7 +90,11 @@ int main(int argc, char **argv)
     printf("long_critical_section: hold_us=%ld\n", hold_us);
 
     uint64_t t0 = bench_now_ns();
-    bench_check(pthread_barrier_init(&holder_has_lock, NULL, (unsigned)A.threads), "barrier init");
+    bench_check(pthread_barrier_init(&phase_done, NULL, (unsigned)A.threads), "barrier init");
+    if (sem_init(&held, 0, 0) != 0) {
+        perror("sem_init");
+        return 3;
+    }
     struct bench_thread *ts = bench_threads_alloc(A.threads, A.seed);
     pthread_t *th = calloc((size_t)A.threads, sizeof *th);
     if (th == NULL)

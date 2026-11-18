@@ -52,6 +52,14 @@
   },
   "overhead": {
     "family": "high_contention",
-    "seed": 1
+    "seed": 1,
+    "params": {
+      "threads": 16,
+      "cs_us": 0,
+      "work_ms": 0,
+      "rate": 0,
+      "iters": 10000
+    },
+    "_note": "fixed-work mode (work_ms 0, rate 0, iters per thread): elapsed time and ops/s measure tracing cost; the time-bounded params above are for the gate's PF runs"
   }
 }

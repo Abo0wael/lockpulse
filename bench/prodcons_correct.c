@@ -9,6 +9,9 @@
  *                   The consumer that takes item K broadcasts "done".
  * Forcing:          none needed; correctness comes from the predicate loops.
  * Duration:         ~work_ms (1.5-3 s with configs); progress on every item.
+ * Fixed-work mode:  --iters N sets K = N items regardless of rate/work_ms; with
+ *                   --rate 0 the producer has no think time (overhead runs).
+ * Output:           "ops=<items consumed>" and "ops_per_s=<...>".
  * Check:            consumed == K and the item checksum matches, else exit 4.
  * Defaults:         threads 2, cs_us 50, work_ms 2000, rate 500.
  */
@@ -86,12 +89,12 @@ int main(int argc, char **argv)
                             .force = 0, .seed = 1};
     bench_parse(argc, argv, &A);
     bench_require_threads("prodcons_correct", &A, 2);
-    if (A.rate < 1) {
-        fprintf(stderr, "prodcons_correct: --rate must be >= 1\n");
+    if (A.iters <= 0 && A.rate < 1) {
+        fprintf(stderr, "prodcons_correct: --rate must be >= 1 (or give --iters for fixed work)\n");
         return 2;
     }
     bench_print_args("prodcons_correct", &A);
-    total_items = A.rate * A.work_ms / 1000;
+    total_items = A.iters > 0 ? A.iters : A.rate * A.work_ms / 1000;
     if (total_items < A.threads)
         total_items = A.threads;
 
@@ -108,6 +111,8 @@ int main(int argc, char **argv)
                 checksum);
         return 4;
     }
+    double secs = (double)(bench_now_ns() - t0) / 1e9;
+    printf("ops=%ld\nops_per_s=%.0f\n", consumed, secs > 0 ? (double)consumed / secs : 0.0);
     bench_finish("prodcons_correct", t0);
     free(th);
     free(ts);

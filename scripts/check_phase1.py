@@ -3,8 +3,8 @@
 
 1. Builds everything (make all).
 2. Runs each family in configs/phase1.json with --tier PF for every seed, plus
-   the overhead family once with --tier P, once with --tier F and once with no
-   tracing at all.
+   the overhead family in its fixed-work mode (overhead.params: fixed iters,
+   no time limit, no think time) once each with --tier P, F, PF and untraced.
 3. Asserts expected exit reasons, non-empty Tier P / Tier F data, timestamp
    ranges inside [start_ns, end_ns] and overlapping (same clock), no tracebuf
    overflow, and that every watchdog kill happened >= watchdog_ms after the
@@ -94,8 +94,18 @@ def parse_elapsed_ns(text):
     return None
 
 
-def run_lp(session, family, cfg, defaults, seed, tier):
-    run_id = "{}-{}-s{}-{}".format(session, family, seed, tier)
+def parse_ops_per_s(text):
+    for line in text.splitlines():
+        if line.startswith("ops_per_s="):
+            try:
+                return float(line.split("=", 1)[1])
+            except ValueError:
+                return None
+    return None
+
+
+def run_lp(session, family, cfg, defaults, seed, tier, label=None):
+    run_id = "{}-{}-s{}-{}".format(session, family, seed, label or tier)
     watchdog_ms = cfg.get("watchdog_ms", defaults["watchdog_ms"])
     max_ms = cfg.get("max_ms", defaults["max_ms"])
     cmd = [str(LP_RUN), "--family", family, "--run-id", run_id, "--tier", tier,
@@ -270,21 +280,22 @@ def main():
             runs.append(r)
     log("")
 
-    log("== overhead runs ==")
+    # Overhead uses the benchmark's fixed-work mode (configs/phase1.json
+    # overhead.params: work_ms 0, rate 0, fixed iters): the time-bounded
+    # collection mode runs for work_ms regardless of tracing and would show 1.00x.
+    log("== overhead runs (fixed work) ==")
     ofam = cfg["overhead"]["family"]
     oseed = cfg["overhead"]["seed"]
-    ocfg = families[ofam]
+    ocfg = dict(families[ofam], params=cfg["overhead"]["params"])
     overhead_runs = {}
-    for tier in ("P", "F"):
-        step("lp-run {} seed={} tier={}".format(ofam, oseed, tier))
-        r = run_lp(session, ofam, ocfg, defaults, oseed, tier)
+    for tier in ("P", "F", "PF"):
+        step("lp-run {} seed={} tier={} fixed-work".format(ofam, oseed, tier))
+        r = run_lp(session, ofam, ocfg, defaults, oseed, tier, label="ovh-" + tier)
         validate(r, ocfg["expected_exit"])
         runs.append(r)
         overhead_runs[tier] = r
-    overhead_runs["PF"] = next((r for r in runs if r["family"] == ofam and r["seed"] == oseed
-                                and r["tier"] == "PF"), None)
 
-    step("{} seed={} untraced (timeout -s KILL 60)".format(ofam, oseed))
+    step("{} seed={} untraced fixed-work (timeout -s KILL 60)".format(ofam, oseed))
     t0 = time.monotonic_ns()
     plain = subprocess.run(KILL_AFTER + bench_cmd(ocfg, oseed), cwd=str(ROOT), capture_output=True, text=True,
                            timeout=90)
@@ -297,22 +308,25 @@ def main():
     summary_table(runs)
     log("")
 
-    log("== overhead ({} seed={}, single run each - a first number, not a benchmark) ==".format(ofam, oseed))
-    log("{:<10} {:>14} {:>14} {:>10}".format("mode", "bench_ms", "wall_ms", "x_untraced"))
-    log("{:<10} {:>14} {:>14} {:>10}".format(
-        "untraced", "{:.2f}".format(plain_elapsed / 1e6) if plain_elapsed else "-",
-        "{:.2f}".format(plain_wall_ns / 1e6), "1.00"))
+    log("== overhead ({} seed={}, fixed work {}, single run each - a first number, not a benchmark) ==".format(
+        ofam, oseed, " ".join("{}={}".format(k, v) for k, v in cfg["overhead"]["params"].items())))
+    hdr = "{:<10} {:>12} {:>12} {:>14} {:>10}"
+    log(hdr.format("mode", "bench_ms", "wall_ms", "lock_ops/s", "x_untraced"))
+    plain_ops = parse_ops_per_s(plain.stdout)
+    log(hdr.format("untraced", "{:.2f}".format(plain_elapsed / 1e6) if plain_elapsed else "-",
+                   "{:.2f}".format(plain_wall_ns / 1e6), "{:.0f}".format(plain_ops) if plain_ops else "-", "1.00"))
     for tier in ("P", "F", "PF"):
         r = overhead_runs.get(tier)
         if r is None or r["meta"] is None:
-            log("{:<10} {:>14}".format("tier " + tier, "n/a"))
+            log("{:<10} {:>12}".format("tier " + tier, "n/a"))
             continue
         el = parse_elapsed_ns(r["stdout"])
+        ops = parse_ops_per_s(r["stdout"])
         ratio = "{:.2f}".format(el / plain_elapsed) if el and plain_elapsed else "-"
-        log("{:<10} {:>14} {:>14} {:>10}".format(
-            "tier " + tier, "{:.2f}".format(el / 1e6) if el else "-",
-            "{:.2f}".format(r["meta"]["duration_ms"]), ratio))
-    log("(bench_ms = the benchmark's own elapsed_ns; wall_ms = lp-run start..end incl. fork/exec, "
+        log(hdr.format("tier " + tier, "{:.2f}".format(el / 1e6) if el else "-",
+                       "{:.2f}".format(r["meta"]["duration_ms"]), "{:.0f}".format(ops) if ops else "-", ratio))
+    log("(bench_ms = the benchmark's own elapsed_ns for a fixed number of lock operations; "
+        "x_untraced = bench_ms / untraced bench_ms; wall_ms = lp-run start..end incl. fork/exec, "
         "or Python-measured for untraced)")
     log("")
 

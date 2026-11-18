@@ -170,7 +170,11 @@
     }
   },
   "overhead": {
-    "families": {"high_contention": "c1", "prodcons_correct": "c1"},
+    "_note": "fixed-work mode: --work-ms 0 --rate 0 --iters N (no time limit, no think time), so bench_ms and ops/s measure tracing cost. Collection keeps the time-bounded configs.",
+    "families": {
+      "high_contention":  {"threads": 16, "cs_us": 0, "work_ms": 0, "rate": 0, "iters": 10000},
+      "prodcons_correct": {"threads": 4,  "cs_us": 0, "work_ms": 0, "rate": 0, "iters": 10000}
+    },
     "reps": 10,
     "seed": 1,
     "modes": ["untraced", "P", "F", "PF"]
