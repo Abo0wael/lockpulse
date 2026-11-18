@@ -3,7 +3,10 @@
  *
  *   lp-run --family NAME --run-id ID [--tier P|F|PF] [--interval-ms 5]
  *          [--watchdog-ms 3000] [--max-ms 10000] [--data-dir data/raw]
- *          [--shim PATH] -- <benchmark> [bench args]
+ *          [--shim PATH] [--tag KEY=VALUE]... -- <benchmark> [bench args]
+ *
+ * --tag stores free-form run attributes (e.g. split=train, config_id=c1) in
+ * the metadata "tags" object; at most LP_MAX_TAGS.
  *
  * Outputs (under --data-dir, default data/raw; never overwritten):
  *   tierP/<run_id>.csv   Tier P samples (tier P or PF)
@@ -28,6 +31,7 @@
 #include <stdlib.h>
 #include <string.h>
 #include <sys/prctl.h>
+#include <sys/resource.h>
 #include <sys/stat.h>
 #include <sys/types.h>
 #include <sys/utsname.h>
@@ -39,10 +43,19 @@
 #include "tracebuf.h"
 #include "watchdog.h"
 
-#define LP_META_SCHEMA_VERSION 1
+#define LP_META_SCHEMA_VERSION 2
 #define LP_MAX_WARNINGS 8
+#define LP_MAX_TAGS 16
+
+/* GitHub-hosted runner identification, recorded when present. */
+static const char *const k_runner_env[] = {
+    "ImageOS", "ImageVersion", "RUNNER_NAME", "RUNNER_OS", "RUNNER_ARCH",
+    "RUNNER_ENVIRONMENT", "GITHUB_RUN_ID", "GITHUB_RUN_ATTEMPT", "GITHUB_SHA", "GITHUB_WORKFLOW",
+};
 
 struct opts {
+    const char *tags[LP_MAX_TAGS];
+    int ntags;
     const char *family;
     const char *run_id;
     const char *tier;
@@ -82,7 +95,7 @@ static void usage(FILE *f)
     fprintf(f,
             "usage: lp-run --family NAME --run-id ID [--tier P|F|PF] [--interval-ms 5]\n"
             "              [--watchdog-ms 3000] [--max-ms 10000] [--data-dir data/raw]\n"
-            "              [--shim PATH] -- <benchmark> [bench args]\n");
+            "              [--shim PATH] [--tag KEY=VALUE]... -- <benchmark> [bench args]\n");
 }
 
 static int parse_pos_long(const char *s, long *out)
@@ -122,6 +135,7 @@ static int parse_opts(int argc, char **argv, struct opts *o)
         {"max-ms", required_argument, NULL, 'm'},
         {"data-dir", required_argument, NULL, 'd'},
         {"shim", required_argument, NULL, 's'},
+        {"tag", required_argument, NULL, 'T'},
         {"help", no_argument, NULL, 'h'},
         {NULL, 0, NULL, 0},
     };
@@ -142,6 +156,15 @@ static int parse_opts(int argc, char **argv, struct opts *o)
         case 't': o->tier = optarg; break;
         case 'd': o->data_dir = optarg; break;
         case 's': o->shim = optarg; break;
+        case 'T': {
+            const char *eq = strchr(optarg, '=');
+            if (eq == NULL || eq == optarg || o->ntags >= LP_MAX_TAGS) {
+                fprintf(stderr, "lp-run: bad --tag '%s' (KEY=VALUE, at most %d)\n", optarg, LP_MAX_TAGS);
+                return -1;
+            }
+            o->tags[o->ntags++] = optarg;
+            break;
+        }
         case 'i':
             if (parse_pos_long(optarg, &o->interval_ms) != 0) {
                 fprintf(stderr, "lp-run: bad --interval-ms\n");
@@ -289,7 +312,37 @@ struct run_result {
     uint64_t dropped;
     uint32_t threads_seen;
     int tierf_mapped;
+    /* lp-run's own CPU usage (sampler + watchdog), measured at the end of the run */
+    int cpu_ok;
+    unsigned long long cpu_utime_ticks, cpu_stime_ticks;
+    long clk_tck;
+    uint64_t ru_user_us, ru_sys_us;
 };
+
+/* CPU used by this launcher process (not the reaped child): utime/stime from
+ * /proc/self/stat (fields 14/15, clock ticks) plus getrusage(RUSAGE_SELF) for
+ * microsecond resolution. */
+static void measure_self_cpu(struct run_result *r)
+{
+    char buf[1024];
+    FILE *f = fopen("/proc/self/stat", "re");
+    if (f != NULL) {
+        if (fgets(buf, sizeof buf, f) != NULL) {
+            const char *rp = strrchr(buf, ')');
+            if (rp != NULL && rp[1] == ' ' &&
+                sscanf(rp + 2, "%*c %*s %*s %*s %*s %*s %*s %*s %*s %*s %*s %llu %llu",
+                       &r->cpu_utime_ticks, &r->cpu_stime_ticks) == 2)
+                r->cpu_ok = 1;
+        }
+        fclose(f);
+    }
+    r->clk_tck = sysconf(_SC_CLK_TCK);
+    struct rusage ru;
+    if (getrusage(RUSAGE_SELF, &ru) == 0) {
+        r->ru_user_us = (uint64_t)ru.ru_utime.tv_sec * 1000000ull + (uint64_t)ru.ru_utime.tv_usec;
+        r->ru_sys_us = (uint64_t)ru.ru_stime.tv_sec * 1000000ull + (uint64_t)ru.ru_stime.tv_usec;
+    }
+}
 
 static int write_meta(const char *path, const struct opts *o, const struct run_result *r,
                       const struct lp_sampler *s, const char *p_path, const char *f_path)
@@ -372,6 +425,36 @@ static int write_meta(const char *path, const struct opts *o, const struct run_r
         fputs("null", f);
     fprintf(f, ",\n  \"exec_errno\": %d", r->exec_errno);
 
+    fputs(",\n  \"tags\": {", f);
+    for (int i = 0; i < o->ntags; i++) {
+        const char *eq = strchr(o->tags[i], '=');
+        char key[128];
+        size_t klen = (size_t)(eq - o->tags[i]);
+        if (klen >= sizeof key)
+            klen = sizeof key - 1;
+        memcpy(key, o->tags[i], klen);
+        key[klen] = '\0';
+        if (i)
+            fputs(", ", f);
+        json_str(f, key);
+        fputs(": ", f);
+        json_str(f, eq + 1);
+    }
+    fputs("}", f);
+
+    uint64_t wall_ns = r->end_ns > r->start_ns ? r->end_ns - r->start_ns : 1;
+    fputs(",\n  \"launcher_cpu\": {\"utime_ticks\": ", f);
+    if (r->cpu_ok)
+        fprintf(f, "%llu, \"stime_ticks\": %llu", r->cpu_utime_ticks, r->cpu_stime_ticks);
+    else
+        fputs("null, \"stime_ticks\": null", f);
+    fprintf(f, ", \"clk_tck\": %ld, \"ru_user_us\": ", r->clk_tck);
+    json_u64(f, r->ru_user_us);
+    fputs(", \"ru_sys_us\": ", f);
+    json_u64(f, r->ru_sys_us);
+    fprintf(f, ", \"cpu_pct\": %.3f}",
+            100.0 * (double)(r->ru_user_us + r->ru_sys_us) * 1000.0 / (double)wall_ns);
+
     fputs(",\n  \"tierP\": ", f);
     if (o->tier_p) {
         fputs("{\"path\": ", f);
@@ -433,7 +516,19 @@ static int write_meta(const char *path, const struct opts *o, const struct run_r
     json_str(f, gnu_get_libc_version());
     fputs(", \"yama_ptrace_scope\": ", f);
     json_str(f, yama[0] ? yama : NULL);
-    fputs("}", f);
+    fputs(", \"runner\": {", f);
+    int nr = 0;
+    for (size_t i = 0; i < sizeof k_runner_env / sizeof k_runner_env[0]; i++) {
+        const char *v = getenv(k_runner_env[i]);
+        if (v == NULL)
+            continue;
+        if (nr++)
+            fputs(", ", f);
+        json_str(f, k_runner_env[i]);
+        fputs(": ", f);
+        json_str(f, v);
+    }
+    fputs("}}", f);
 
     fputs(",\n  \"warnings\": [", f);
     for (int i = 0; i < g_nwarnings; i++) {
@@ -680,6 +775,7 @@ int main(int argc, char **argv)
     }
     r.end_ns = now_ns();
     decode_status(status, &r);
+    measure_self_cpu(&r);
 
     if (o.tier_f && r.tierf_mapped) {
         r.progress_counter = lp_watchdog_counter(&wd);
