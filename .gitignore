@@ -7,8 +7,13 @@ data/raw/*/*
 data/processed/*
 !data/processed/.gitkeep
 
-# gate report (regenerated on every run; CI uploads it as an artifact)
-results/check_phase1_*.txt
+# generated reports (regenerated on every run; CI uploads them as artifacts)
+results/check_phase*_*.txt
+results/collect_*.txt
+results/labels_summary.txt
+results/overhead.csv
+results/overhead_runs.csv
+results/review.md
 
 # python
 __pycache__/

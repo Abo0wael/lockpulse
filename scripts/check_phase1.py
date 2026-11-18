@@ -12,9 +12,9 @@
 4. Prints a per-run summary table and the overhead numbers.
 5. Prints the tail of one deadlock run (Tier F + Tier P) for a human to read.
 
-Raw data goes to data/raw/ (immutable; run ids carry a session timestamp so
+Raw data goes to data/raw/gate/ (immutable; run ids carry a session timestamp so
 nothing is ever overwritten). Tier F CSVs produced by lp-dump are derived data
-and go to data/processed/tierF/. The printed report is also saved to
+and go to data/processed/gate/tierF/. The printed report is also saved to
 results/check_phase1_latest.txt.
 
 Exit status: 0 if every assertion passed, 1 otherwise.
@@ -32,8 +32,8 @@ ROOT = Path(__file__).resolve().parent.parent
 BUILD = ROOT / "build"
 LP_RUN = BUILD / "lp-run"
 LP_DUMP = BUILD / "lp-dump"
-RAW = ROOT / "data" / "raw"
-PROC_F = ROOT / "data" / "processed" / "tierF"
+RAW = ROOT / "data" / "raw" / "gate"  # gate runs never mix with the dataset
+PROC_F = ROOT / "data" / "processed" / "gate" / "tierF"
 RESULTS = ROOT / "results"
 CONFIG = ROOT / "configs" / "phase1.json"
 REPORT = RESULTS / "check_phase1_latest.txt"

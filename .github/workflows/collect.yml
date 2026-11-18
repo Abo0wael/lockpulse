@@ -1,0 +1,153 @@
+name: collect
+
+# Phase-2 data collection: 13 families x 4 configs x 15 seeds (~780 runs),
+# one parallel job per family, plus an overhead job; a final job merges
+# everything, labels it and writes the review sample. Manual trigger only.
+
+on:
+  workflow_dispatch:
+    inputs:
+      seeds:
+        description: "Seeds to run, e.g. 1-15 or 1-3"
+        required: true
+        default: "1-15"
+
+env:
+  EXTRA_CFLAGS: -Werror
+
+jobs:
+  family:
+    name: collect ${{ matrix.family }}
+    runs-on: ubuntu-26.04
+    timeout-minutes: 60
+    strategy:
+      fail-fast: false
+      matrix:
+        family:
+          - two_lock_inversion
+          - three_thread_cycle
+          - dining_philosophers
+          - lost_wakeup
+          - prodcons_missing_signal
+          - barrier_mismatch
+          - sem_never_posted
+          - high_contention
+          - long_critical_section
+          - consistent_lock_order
+          - sleeping_workers
+          - prodcons_correct
+          - blocked_on_io
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential python3-pandas
+
+      - name: Build
+        run: make all
+
+      - name: Collect
+        shell: bash
+        run: |
+          mkdir -p results
+          python3 scripts/collect.py --family "${{ matrix.family }}" --seeds "${{ inputs.seeds }}" \
+            --summary-out "results/collect_${{ matrix.family }}.txt"
+
+      - name: Upload family data
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: lockpulse-data-${{ matrix.family }}
+          # Raw Tier F .bin files are not uploaded (sparse 256 MiB files); the
+          # complete Tier F content is in data/processed/tierF/*.csv (lp-dump).
+          path: |
+            data/raw/meta/
+            data/raw/tierP/
+            data/processed/tierF/
+            results/collect_${{ matrix.family }}.txt
+          if-no-files-found: error
+          retention-days: 30
+
+  overhead:
+    runs-on: ubuntu-26.04
+    timeout-minutes: 60
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install toolchain
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y build-essential python3-pandas
+
+      - name: Build
+        run: make all
+
+      - name: Overhead runs (10 reps x 4 modes x 2 families)
+        run: python3 scripts/overhead.py
+
+      - name: Upload overhead results
+        if: always()
+        uses: actions/upload-artifact@v7
+        with:
+          name: lockpulse-overhead
+          path: |
+            results/overhead.csv
+            results/overhead_runs.csv
+            data/raw/overhead/meta/
+          if-no-files-found: error
+          retention-days: 30
+
+  merge:
+    needs: [family, overhead]
+    if: always()
+    runs-on: ubuntu-26.04
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install Python
+        run: |
+          sudo apt-get update
+          sudo apt-get install -y python3-pandas
+
+      - name: Download all family and overhead artifacts
+        uses: actions/download-artifact@v8
+        with:
+          pattern: lockpulse-*
+          merge-multiple: true
+          path: .
+
+      - name: Label all runs
+        run: python3 ml/label.py --summary results/labels_summary.txt
+
+      - name: Review sample
+        run: python3 scripts/review_sample.py
+
+      - name: Report
+        shell: bash
+        run: |
+          {
+            echo '## LockPulse collection'
+            echo
+            echo '```'
+            cat results/labels_summary.txt
+            echo '```'
+            echo
+            echo 'Phase-2 gate (human): ambiguous < 5 % overall, and the 10 runs in results/review.md checked by hand.'
+          } >> "$GITHUB_STEP_SUMMARY"
+          cat results/labels_summary.txt
+
+      - name: Upload merged dataset
+        uses: actions/upload-artifact@v7
+        with:
+          name: lockpulse-data-all
+          path: |
+            data/raw/meta/
+            data/raw/tierP/
+            data/raw/overhead/meta/
+            data/processed/
+            results/
+          if-no-files-found: error
+          retention-days: 90

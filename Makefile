@@ -1,4 +1,4 @@
-# LockPulse - phase 1 build.
+# LockPulse - build and pipeline entry points (phase 2).
 # Linux x86-64, gcc, GNU make. Zero warnings policy: CI builds with
 # EXTRA_CFLAGS=-Werror (set it locally too to reproduce CI).
 #
@@ -18,22 +18,33 @@ BUILD    := build
 SHIM     := $(BUILD)/liblockpulse.so
 LAUNCHER := $(BUILD)/lp-run
 DUMP     := $(BUILD)/lp-dump
-BENCHES  := two_lock_inversion lost_wakeup high_contention long_critical_section
+SELFTEST := $(BUILD)/tests/shim_selftest
+BENCHES  := two_lock_inversion three_thread_cycle dining_philosophers lost_wakeup \
+            prodcons_missing_signal barrier_mismatch sem_never_posted \
+            high_contention long_critical_section consistent_lock_order \
+            sleeping_workers prodcons_correct blocked_on_io
 BENCH_BINS := $(addprefix $(BUILD)/bench/,$(BENCHES))
 
 TRACEBUF_SRC := runtime/tracebuf.c
 TRACEBUF_HDR := runtime/tracebuf.h
 
-.PHONY: all shim launcher bench tools clean check-phase1
+# collect / labels options, e.g. make collect FAMILY=lost_wakeup SEEDS=1-3
+FAMILY   ?=
+SEEDS    ?=
+COLLECT_ARGS := $(if $(FAMILY),--family $(FAMILY)) $(if $(SEEDS),--seeds $(SEEDS))
 
-all: shim launcher bench tools
+.PHONY: all shim launcher bench tools selftest clean \
+        check-phase1 check-phase2 check-shim test-ml collect labels review overhead
+
+all: shim launcher bench tools selftest
 
 shim: $(SHIM)
 launcher: $(LAUNCHER)
 bench: $(BENCH_BINS)
 tools: $(DUMP)
+selftest: $(SELFTEST)
 
-# -fvisibility=hidden: only the interposed pthread_* symbols are exported.
+# -fvisibility=hidden: only the interposed pthread_* / sem_* symbols are exported.
 $(SHIM): runtime/shim.c $(TRACEBUF_SRC) $(TRACEBUF_HDR)
 >@mkdir -p $(@D)
 >$(CC) $(CFLAGS) -shared -fPIC -fvisibility=hidden -o $@ runtime/shim.c $(TRACEBUF_SRC) -ldl -pthread
@@ -46,12 +57,39 @@ $(DUMP): tools/lp-dump.c $(TRACEBUF_SRC) $(TRACEBUF_HDR)
 >@mkdir -p $(@D)
 >$(CC) $(CFLAGS) -Iruntime -o $@ tools/lp-dump.c $(TRACEBUF_SRC)
 
+$(SELFTEST): runtime/tests/shim_selftest.c
+>@mkdir -p $(@D)
+>$(CC) $(CFLAGS) -o $@ $< $(LDLIBS_T)
+
 $(BUILD)/bench/%: bench/%.c bench/bench_common.h
 >@mkdir -p $(@D)
 >$(CC) $(CFLAGS) -o $@ $< $(LDLIBS_T)
 
+# ---- gates and tests -------------------------------------------------------
 check-phase1: all
 >$(PYTHON) scripts/check_phase1.py
+
+check-phase2: all
+>$(PYTHON) scripts/check_phase2.py
+
+check-shim: all
+>$(PYTHON) scripts/check_phase2.py --shim-only
+
+test-ml:
+>$(PYTHON) -m unittest discover -s ml/tests -v
+
+# ---- dataset pipeline (phase 2) ---------------------------------------------
+collect: all
+>$(PYTHON) scripts/collect.py $(COLLECT_ARGS)
+
+labels:
+>$(PYTHON) ml/label.py --summary results/labels_summary.txt
+
+review: labels
+>$(PYTHON) scripts/review_sample.py
+
+overhead: all
+>$(PYTHON) scripts/overhead.py
 
 # Never touches data/: raw data is immutable.
 clean:
