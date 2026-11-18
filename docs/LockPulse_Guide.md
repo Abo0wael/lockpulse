@@ -109,7 +109,7 @@ The suite has 13 scenario families: 7 that hang and 6 hard negatives. Each famil
 | Producer–consumer, missing signal | Yes | Consumer waits on a condition the producer never signals on the last item | Train |
 | Barrier mismatch | Yes | Barrier sized for N threads, one thread exits early | Validation |
 | Semaphore never posted | Yes | Workers `sem_wait` on a semaphore whose poster crashes out | Test |
-| High contention | No | 16 threads hammer one mutex with tiny critical sections | Train |
+| High contention | No | 16 threads (4–16) keep one mutex ~90% utilised for 1.5–3 s; most threads are blocked in futex at any moment but all make progress | Train |
 | Long critical section | No | Owner holds a lock for 1–3 s of real work, then releases | Train |
 | Consistent lock order | No | Many locks, always taken in global order | Validation |
 | Sleeping workers | No | All threads in `nanosleep` for 1–2 s, then resume | Train |
