@@ -71,11 +71,35 @@ def verify():
     return rec
 
 
+def compare(other_dir):
+    """Check that a fresh phase-3 run in other_dir reproduces the frozen detectors:
+    identical model bytes and identical chosen settings (runtime/versions may differ)."""
+    rec = verify()
+    other = Path(other_dir)
+    bad = []
+    for name in ("M1", "M2", "M3"):
+        frozen = rec["sha256"]["results/phase3/models/{}.joblib".format(name)]
+        got = sha256(other / "models" / "{}.joblib".format(name))
+        if got != frozen:
+            bad.append("{} model bytes differ".format(name))
+    a = json.loads((PHASE3 / "chosen.json").read_text(encoding="utf-8"))["settings"]
+    b = json.loads((other / "chosen.json").read_text(encoding="utf-8"))["settings"]
+    if a != b:
+        bad.append("chosen settings differ")
+    if bad:
+        raise FreezeError("freeze: the re-run in {} does not reproduce the frozen detectors: {}".format(
+            other, "; ".join(bad)))
+    print("re-run in {} reproduces the frozen detectors (models byte-identical, settings identical)".format(other))
+    return rec
+
+
 def main(argv=None):
     argv = sys.argv[1:] if argv is None else argv
     cmd = argv[0] if argv else "check"
     if cmd == "write":
         rec = write()
+    elif cmd == "compare":
+        rec = compare(argv[1])
     else:
         rec = verify()
     for f, h in rec["sha256"].items():

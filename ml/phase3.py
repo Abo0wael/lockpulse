@@ -192,6 +192,11 @@ def run(data=None, features_dir=None, out=None, rebuild=False):
     data = Path(data) if data else F.default_data_dir()
     features_dir = Path(features_dir) if features_dir else ROOT / "data" / "processed"
     out = Path(out) if out else ROOT / "results" / "phase3"
+    frozen = ROOT / "results" / "phase4" / "frozen.json"
+    if frozen.exists() and out.resolve() == (ROOT / "results" / "phase3").resolve():
+        raise SystemExit("phase3: results/phase3 is frozen for phase 4 ({}); re-run into another directory, "
+                         "e.g. --out build/phase3-repro (make reproduce does this and checks it matches)".format(
+                             frozen.relative_to(ROOT)))
     print("phase3: data={}".format(data))
 
     print("== 1. features ==")

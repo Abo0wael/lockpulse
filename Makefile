@@ -35,7 +35,7 @@ COLLECT_ARGS := $(if $(FAMILY),--family $(FAMILY)) $(if $(SEEDS),--seeds $(SEEDS
 
 .PHONY: all shim launcher bench tools selftest clean \
         check-phase1 check-phase2 check-shim test-ml collect labels review overhead \
-        venv phase3
+        venv phase3 phase4 reproduce demo
 
 all: shim launcher bench tools selftest
 
@@ -103,6 +103,24 @@ venv:
 
 phase3:
 >$(ML_PY) -m ml.phase3
+
+# ---- phase 4: frozen detectors on test, ablations, overhead, figures --------
+phase4:
+>$(ML_PY) -m ml.phase4
+
+# From raw traces to every table and figure. `all` stays the C build (CI uses it),
+# so the ML pipeline is `reproduce`: phase 3 is re-run into build/phase3-repro and
+# must reproduce the frozen detectors byte for byte before phase 4 runs on them.
+reproduce:
+>$(ML_PY) -m ml.phase3 --out build/phase3-repro --rebuild-features
+>$(ML_PY) -m ml.freeze compare build/phase3-repro
+>$(ML_PY) -m ml.phase4
+
+# make demo RUN=dining_philosophers-c1-s01 [SPEED=1.0]
+RUN   ?= dining_philosophers-c1-s01
+SPEED ?= 1.0
+demo:
+>$(ML_PY) -m demo.replay $(RUN) --speed $(SPEED)
 
 # Never touches data/: raw data is immutable.
 clean:
