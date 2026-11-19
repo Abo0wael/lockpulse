@@ -7,7 +7,16 @@ ground-truth labels and as an upper-bound baseline — never as a model input.
 
 Full specification: docs/LockPulse_Guide.md — read it before any non-trivial change.
 
-## Current phase: 3 (Features and models). Do not implement later phases unless asked.
+## Current phase: 4 (Evaluation and demo). Do not go beyond the guide unless asked.
+
+## Phase 4 rules
+- The phase-3 detectors are FROZEN (results/phase4/FROZEN.md, frozen.json). Never re-tune,
+  retrain or overwrite results/phase3/ after seeing test numbers; `python -m ml.freeze check`
+  must pass, and ml.phase3 refuses to write into results/phase3/.
+- The one-shot test evaluation is done (results/phase4/NOTES.md). Re-running it is only a
+  deterministic regeneration (ml.phase4) and must reproduce the committed test table byte for
+  byte; any real re-run (e.g. a bug fix) must be logged in results/phase4/NOTES.md with why.
+- Ablations choose on validation and only report on test.
 
 ## Phase 3 rules
 - The TEST split (dining_philosophers, sem_never_posted, blocked_on_io) is never used for

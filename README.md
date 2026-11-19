@@ -7,7 +7,7 @@ LockPulse is a research prototype. It detects hangs (deadlocks, lost wakeups, ba
 | **P** (partial) | An external sampler reads `/proc/<pid>/task/<tid>/{stat,status,syscall}` every 5 ms. Nothing runs inside the target. | The **only** input the ML model will ever see (later phases). |
 | **F** (full) | An `LD_PRELOAD` shim (`liblockpulse.so`) logs every pthread mutex, condition-variable, semaphore and barrier call into a shared-memory trace file. | Ground-truth labels and an upper-bound baseline. **Never** a model input. |
 
-A watchdog kills runs that stop making progress. The current phase is **3 (Features and models)**: Tier P window features, rule baselines B1–B4 and models M1–M3, all tuned and compared on the validation split. Phase 2 (all 13 families, 780 collected runs, labels, overhead) is complete. The full specification is [docs/LockPulse_Guide.md](docs/LockPulse_Guide.md), and the project rules are in [CLAUDE.md](CLAUDE.md).
+A watchdog kills runs that stop making progress. The current phase is **4 (Evaluation and demo)**: the frozen phase-3 detectors evaluated once on the held-out test families, ablations, overhead, figures, a replay demo and the report ([results/phase4/REPORT.md](results/phase4/REPORT.md)). Phases 1–3 are complete. The full specification is [docs/LockPulse_Guide.md](docs/LockPulse_Guide.md), and the project rules are in [CLAUDE.md](CLAUDE.md).
 
 ## Requirements
 
@@ -110,6 +110,54 @@ make overhead                                    # scripts/overhead.py -> result
 
   Raw Tier F `.bin` files are not uploaded (sparse 256 MiB files); their complete content is in `data/processed/tierF/*.csv.gz`. `scripts/pack_data.py` gzips staged copies of the raw Tier P CSVs, so the raw files themselves are never modified. Expect roughly 75 MB compressed (~530 MB as plain CSV) for all 780 runs. This is an upper bound estimated from the configs; `high_contention` (~25 MB gz), `consistent_lock_order` (~14 MB) and `prodcons_correct` (~10 MB) are the largest.
 - **`overhead.py`** runs `high_contention` and `prodcons_correct` 10 times in each of 4 modes (untraced, P, F, PF). The benchmarks run in *fixed-work* mode (`--work-ms 0 --rate 0 --iters N`): a fixed number of operations with no time limit and no think time. The time-bounded collection mode always runs for `work_ms`, so it can't show overhead. The script reports the median and IQR of `bench_ms` and of ops/s, the slowdown versus untraced, and the launcher/sampler CPU %, which `lp-run` reads from its own `/proc/self/stat` at the end of the run. The phase-1 gate's overhead block uses the same mode.
+
+## Reproduce every result from a fresh clone (no Linux needed)
+
+Phases 3 and 4 are pure Python and run on Windows, macOS or Linux. The commands below use Windows paths; on Linux use `.venv/bin/python`.
+
+1. **Get the code:**
+
+   ```sh
+   git clone https://github.com/Abo0wael/lockpulse.git && cd lockpulse
+   ```
+
+2. **Get the dataset** (collect run 44361187947, artifact `lockpulse-data-all`, about 52 MB unzipped). Use the GitHub CLI, or download it from the run's Actions page and unzip it to the same place:
+
+   ```sh
+   gh run download 44361187947 -n lockpulse-data-all -D data/collect1/lockpulse-data-all
+   ```
+
+   You should then have `data/collect1/lockpulse-data-all/data/{raw,processed}` and `.../results/`.
+
+3. **Re-label once.** The artifact predates the 2026-11-19 split fix, so this updates the split column from `configs/phase2.json`:
+
+   ```sh
+   python -m venv .venv
+   .venv/Scripts/python -m pip install -r requirements-ml.txt
+   .venv/Scripts/python ml/label.py --raw data/collect1/lockpulse-data-all/data/raw --processed data/collect1/lockpulse-data-all/data/processed
+   ```
+
+4. **Run everything:**
+
+   ```sh
+   .venv/Scripts/python -m ml.freeze check     # the frozen detectors are intact
+   .venv/Scripts/python -m ml.phase4           # all phase-4 tables + figures (~50 s)
+   make reproduce                              # or: also retrain phase 3 from raw traces and check it
+                                               # reproduces the frozen models byte for byte (~3 min)
+   .venv/Scripts/python -m demo.replay dining_philosophers-c1-s01   # replay demo (see demo/DEMO.md)
+   ```
+
+`make all` stays the C build that CI uses; the ML pipeline is `make reproduce` (phase 3 then phase 4), plus `make phase4` and `make demo RUN=<run_id>`.
+
+## Phase 4: evaluation and demo
+
+- **Freeze:** `results/phase4/FROZEN.md` / `frozen.json` hold the SHA-256 of the phase-3 settings and models (committed). `ml.freeze` verifies them, phase 4 loads nothing else, and `ml.phase3` refuses to overwrite `results/phase3/`.
+- **Test evaluation:** `python -m ml.evaluate --split test --final` was run once. Its log, time and code commit are in `results/phase4/NOTES.md`. The output is `test_table.md`/`.csv`, overall and per test family.
+- **Ablations:** `ablation_table.md`. Feature groups for M2/M3, and sampling interval 5/10/20 ms for M2/M3/B2. Every choice is made on validation; the numbers are reported on test.
+- **Overhead:** `overhead_table.md`, copied from the collect artifact (no new runs).
+- **Figures:** `results/phase4/figures/` (delay box plot, false alarms by family, overhead, a hang-run timeline).
+- **Demo:** `python -m demo.replay <run_id> [--speed 1.0]` replays a recorded run with the frozen detectors and shows thread states, the M3 score, B2 silence, B3 cycles, alerts, the ground truth and delays. The 5-minute script is `demo/DEMO.md`.
+- **Report:** `results/phase4/REPORT.md`.
 
 ## Phase 3: features, baselines and models
 
@@ -290,6 +338,8 @@ Ambiguous runs are excluded from training later. Tier P is used here for labels 
 | Phase 3: baselines | `ml-baselines/` | `ml/baselines.py`, `ml/tests/test_baselines.py` |
 | Phase 3: models | `ml-train/` | `ml/train.py`, `requirements-ml.txt` |
 | Phase 3: evaluation | `ml-eval/` | `ml/evaluate.py` (alert policy, threshold rule, tables), `ml/tests/test_evaluate.py` |
+| Phase 4: freeze, test evaluation, ablations | `ml-eval/` | `ml/freeze.py`, `ml/ablations.py`, `ml/phase4.py`, `results/phase4/` tables |
+| Phase 4: figures, demo, report | `ml-runner/` | `ml/figures.py`, `ml/runview.py`, `demo/`, `results/phase4/REPORT.md` |
 | Phase 3: runner and CI | `ml-runner/` | `ml/phase3.py`, `ml/__init__.py`, `results/phase3/NOTES.md`, the `ml-tests` job in `.github/workflows/ci.yml`, the `venv`/`phase3`/`test-ml` Makefile targets |
 | Shared (any change needs two reviewers) | `docs/` | `Makefile`, `README.md`, `CLAUDE.md`, `docs/`, `bench/bench_common.h`, `.gitignore`, `.gitattributes` |
 
