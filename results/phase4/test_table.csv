@@ -1,0 +1,29 @@
+detector,input,setting,scope,runs,hang_runs,detected,detection_rate,delay_median_ms,delay_p90_ms,fa_healthy,fa_early,fa_rate,pr_auc
+B1 fixed timeout,Tier P,T=1500 ms,overall,180,91,91,1.0000,1512.0970,1524.8421,23,0,0.1278,0.9185
+B1 fixed timeout,Tier P,T=1500 ms,blocked_on_io,60,0,0,,,,23,0,0.3833,
+B1 fixed timeout,Tier P,T=1500 ms,dining_philosophers,60,46,46,1.0000,1507.6172,1513.2241,0,0,0.0000,0.9999
+B1 fixed timeout,Tier P,T=1500 ms,sem_never_posted,60,45,45,1.0000,1517.2622,1528.0066,0,0,0.0000,0.9997
+B2 futex silence,Tier P,T=50 ms,overall,180,91,91,1.0000,69.4369,83.0818,0,0,0.0000,0.9983
+B2 futex silence,Tier P,T=50 ms,blocked_on_io,60,0,0,,,,0,0,0.0000,
+B2 futex silence,Tier P,T=50 ms,dining_philosophers,60,46,46,1.0000,62.6456,69.5214,0,0,0.0000,0.9995
+B2 futex silence,Tier P,T=50 ms,sem_never_posted,60,45,45,1.0000,77.9021,84.9694,0,0,0.0000,0.9993
+B3 wait-for graph,Tier F,no threshold (cycle at MUTEX_REQ),overall,180,91,46,0.5055,0.0003,0.0006,0,0,0.0000,
+B3 wait-for graph,Tier F,no threshold (cycle at MUTEX_REQ),blocked_on_io,60,0,0,,,,0,0,0.0000,
+B3 wait-for graph,Tier F,no threshold (cycle at MUTEX_REQ),dining_philosophers,60,46,46,1.0000,0.0003,0.0006,0,0,0.0000,
+B3 wait-for graph,Tier F,no threshold (cycle at MUTEX_REQ),sem_never_posted,60,45,0,0.0000,,,0,0,0.0000,
+B4 progress watchdog,Tier F,T=1500 ms,overall,180,91,91,1.0000,1512.5126,1514.5165,23,0,0.1278,
+B4 progress watchdog,Tier F,T=1500 ms,blocked_on_io,60,0,0,,,,23,0,0.3833,
+B4 progress watchdog,Tier F,T=1500 ms,dining_philosophers,60,46,46,1.0000,1511.8787,1514.5688,0,0,0.0000,
+B4 progress watchdog,Tier F,T=1500 ms,sem_never_posted,60,45,45,1.0000,1512.7874,1514.1346,0,0,0.0000,
+M1 logistic regression,Tier P,"W=10 (50 ms), {""C"": 10.0}, threshold=0.9996",overall,180,91,91,1.0000,36.3207,110.4083,15,0,0.0833,0.9907
+M1 logistic regression,Tier P,"W=10 (50 ms), {""C"": 10.0}, threshold=0.9996",blocked_on_io,60,0,0,,,,15,0,0.2500,
+M1 logistic regression,Tier P,"W=10 (50 ms), {""C"": 10.0}, threshold=0.9996",dining_philosophers,60,46,46,1.0000,45.7194,111.8006,0,0,0.0000,1.0000
+M1 logistic regression,Tier P,"W=10 (50 ms), {""C"": 10.0}, threshold=0.9996",sem_never_posted,60,45,45,1.0000,23.9804,34.4506,0,0,0.0000,0.9998
+M2 random forest,Tier P,"W=10 (50 ms), {""max_depth"": 6, ""min_samples_leaf"": 5}, threshold=0.9947",overall,180,91,91,1.0000,46.8713,64.7469,0,0,0.0000,0.9987
+M2 random forest,Tier P,"W=10 (50 ms), {""max_depth"": 6, ""min_samples_leaf"": 5}, threshold=0.9947",blocked_on_io,60,0,0,,,,0,0,0.0000,
+M2 random forest,Tier P,"W=10 (50 ms), {""max_depth"": 6, ""min_samples_leaf"": 5}, threshold=0.9947",dining_philosophers,60,46,46,1.0000,45.4535,69.5334,0,0,0.0000,1.0000
+M2 random forest,Tier P,"W=10 (50 ms), {""max_depth"": 6, ""min_samples_leaf"": 5}, threshold=0.9947",sem_never_posted,60,45,45,1.0000,47.9491,63.6582,0,0,0.0000,0.9998
+M3 gradient boosting,Tier P,"W=10 (50 ms), {""learning_rate"": 0.1, ""max_leaf_nodes"": 31}, threshold=1",overall,180,91,91,1.0000,55.4831,60.4084,0,0,0.0000,0.9986
+M3 gradient boosting,Tier P,"W=10 (50 ms), {""learning_rate"": 0.1, ""max_leaf_nodes"": 31}, threshold=1",blocked_on_io,60,0,0,,,,0,0,0.0000,
+M3 gradient boosting,Tier P,"W=10 (50 ms), {""learning_rate"": 0.1, ""max_leaf_nodes"": 31}, threshold=1",dining_philosophers,60,46,46,1.0000,57.1237,59.6987,0,0,0.0000,1.0000
+M3 gradient boosting,Tier P,"W=10 (50 ms), {""learning_rate"": 0.1, ""max_leaf_nodes"": 31}, threshold=1",sem_never_posted,60,45,45,1.0000,46.5459,62.9971,0,0,0.0000,0.9998
