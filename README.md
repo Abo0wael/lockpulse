@@ -7,7 +7,7 @@ LockPulse is a research prototype. It detects hangs (deadlocks, lost wakeups, ba
 | **P** (partial) | An external sampler reads `/proc/<pid>/task/<tid>/{stat,status,syscall}` every 5 ms. Nothing runs inside the target. | The **only** input the ML model will ever see (later phases). |
 | **F** (full) | An `LD_PRELOAD` shim (`liblockpulse.so`) logs every pthread mutex, condition-variable, semaphore and barrier call into a shared-memory trace file. | Ground-truth labels and an upper-bound baseline. **Never** a model input. |
 
-A watchdog kills runs that stop making progress. The current phase is **2 (Benchmark and labels)**: all 13 scenario families, about 780 collected runs, the labeling oracle and overhead runs. Features and models come in phase 3. The full specification is [docs/LockPulse_Guide.md](docs/LockPulse_Guide.md), and the project rules are in [CLAUDE.md](CLAUDE.md).
+A watchdog kills runs that stop making progress. The current phase is **3 (Features and models)**: Tier P window features, rule baselines B1–B4 and models M1–M3, all tuned and compared on the validation split. Phase 2 (all 13 families, 780 collected runs, labels, overhead) is complete. The full specification is [docs/LockPulse_Guide.md](docs/LockPulse_Guide.md), and the project rules are in [CLAUDE.md](CLAUDE.md).
 
 ## Requirements
 
@@ -110,6 +110,41 @@ make overhead                                    # scripts/overhead.py -> result
 
   Raw Tier F `.bin` files are not uploaded (sparse 256 MiB files); their complete content is in `data/processed/tierF/*.csv.gz`. `scripts/pack_data.py` gzips staged copies of the raw Tier P CSVs, so the raw files themselves are never modified. Expect roughly 75 MB compressed (~530 MB as plain CSV) for all 780 runs. This is an upper bound estimated from the configs; `high_contention` (~25 MB gz), `consistent_lock_order` (~14 MB) and `prodcons_correct` (~10 MB) are the largest.
 - **`overhead.py`** runs `high_contention` and `prodcons_correct` 10 times in each of 4 modes (untraced, P, F, PF). The benchmarks run in *fixed-work* mode (`--work-ms 0 --rate 0 --iters N`): a fixed number of operations with no time limit and no think time. The time-bounded collection mode always runs for `work_ms`, so it can't show overhead. The script reports the median and IQR of `bench_ms` and of ops/s, the slowdown versus untraced, and the launcher/sampler CPU %, which `lp-run` reads from its own `/proc/self/stat` at the end of the run. The phase-1 gate's overhead block uses the same mode.
+
+## Phase 3: features, baselines and models
+
+Phase 3 is pure Python and runs on any OS, Windows included:
+
+```sh
+make venv        # .venv with the pinned requirements-ml.txt (numpy, pandas, scikit-learn, joblib)
+make phase3      # = python -m ml.phase3: features -> baselines -> train -> evaluate (about 2.5 min)
+make test-ml     # unit tests (also in CI, job ml-tests)
+```
+
+- **Input:** the collected dataset. `data/collect1/lockpulse-data-all/data` is used if it exists, else `data/`; pass `--data` to choose another.
+- **Features:** `data/processed/features_W{10,20,40}.csv.gz`.
+- **Results:** `results/phase3/`:
+  - `validation_table.md` / `.csv`: the phase-3 gate table;
+  - `chosen.json`: every chosen setting, versions and runtime;
+  - `model_search.csv` and `baseline_sweeps.csv`: every candidate on validation;
+  - `feature_importance.csv`;
+  - `train_table.md`: diagnostic only;
+  - `NOTES.md`: what was chosen and why, surprises, and where the models lose;
+  - `models/*.joblib`: gitignored.
+
+| Module | Role |
+|---|---|
+| `ml/features.py` | Tier P → one row per sampler tick, trailing-window features (W ∈ {10, 20, 40} ticks). Causal, warm-up skipped, label y = tick ≥ t0. |
+| `ml/baselines.py` | B1 CPU-silence timeout, B2 all-futex silence (Tier P); B3 wait-for cycle, B4 progress watchdog (Tier F). |
+| `ml/train.py` | M1 logistic regression, M2 random forest, M3 gradient boosting. Fitted on train runs; W, hyperparameters and threshold chosen on validation. |
+| `ml/evaluate.py` | Alert policy (3 consecutive ticks, first alert counts), run-level metrics, the threshold rule (max detection s.t. false alarms ≤ 5 %, then lower median delay), the test-split guard. |
+| `ml/phase3.py` | End-to-end runner and tables. |
+
+- **Rules:**
+  - The test split is never used in phase 3: `python -m ml.evaluate --split test` refuses without `--final` (phase 4).
+  - Model inputs are Tier P features only.
+  - Ambiguous runs are excluded everywhere.
+  - Random seeds are fixed.
 
 ## Gates
 
@@ -249,8 +284,13 @@ Ambiguous runs are excluded from training later. Tier P is used here for labels 
 | Runtime | `runtime/` | `runtime/shim.c`, `runtime/tracebuf.c`, `runtime/tracebuf.h`, `tools/lp-dump.c`, `runtime/tests/shim_selftest.c` |
 | Benchmarks A (hang families) | `bench-hang/` | `bench/two_lock_inversion.c`, `bench/three_thread_cycle.c`, `bench/dining_philosophers.c`, `bench/lost_wakeup.c`, `bench/prodcons_missing_signal.c`, `bench/barrier_mismatch.c`, `bench/sem_never_posted.c` |
 | Benchmarks B (healthy families + configs) | `bench-healthy/` | `bench/high_contention.c`, `bench/long_critical_section.c`, `bench/consistent_lock_order.c`, `bench/sleeping_workers.c`, `bench/prodcons_correct.c`, `bench/blocked_on_io.c`, `configs/phase2.json`, `configs/phase1.json` |
-| Oracle | `oracle/` | `ml/label.py`, `ml/tests/` |
+| Oracle | `oracle/` | `ml/label.py`, `ml/tests/test_label.py` |
 | Collection | `collect/` | `scripts/collect.py`, `scripts/overhead.py`, `scripts/review_sample.py`, `scripts/check_phase2.py`, `scripts/lpkit.py`, `scripts/check_phase1.py`, `.github/workflows/collect.yml`, `.github/workflows/ci.yml`, `launcher/*` |
+| Phase 3: features | `ml-features/` | `ml/features.py`, `ml/tests/test_features.py` (incl. the leakage tests) |
+| Phase 3: baselines | `ml-baselines/` | `ml/baselines.py`, `ml/tests/test_baselines.py` |
+| Phase 3: models | `ml-train/` | `ml/train.py`, `requirements-ml.txt` |
+| Phase 3: evaluation | `ml-eval/` | `ml/evaluate.py` (alert policy, threshold rule, tables), `ml/tests/test_evaluate.py` |
+| Phase 3: runner and CI | `ml-runner/` | `ml/phase3.py`, `ml/__init__.py`, `results/phase3/NOTES.md`, the `ml-tests` job in `.github/workflows/ci.yml`, the `venv`/`phase3`/`test-ml` Makefile targets |
 | Shared (any change needs two reviewers) | `docs/` | `Makefile`, `README.md`, `CLAUDE.md`, `docs/`, `bench/bench_common.h`, `.gitignore`, `.gitattributes` |
 
 `runtime/tracebuf.h` is the contract between the shim, the watchdog, `lp-dump` and `ml/label.py`. Any layout or event change must bump `LP_SCHEMA_VERSION`, keep `lp-dump` reading older versions, and update the format section above and `PROGRESS_EVENTS` in `ml/label.py` in the same PR.

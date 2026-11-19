@@ -7,7 +7,20 @@ ground-truth labels and as an upper-bound baseline — never as a model input.
 
 Full specification: docs/LockPulse_Guide.md — read it before any non-trivial change.
 
-## Current phase: 2 (Benchmark and labels). Do not implement later phases unless asked.
+## Current phase: 3 (Features and models). Do not implement later phases unless asked.
+
+## Phase 3 rules
+- The TEST split (dining_philosophers, sem_never_posted, blocked_on_io) is never used for
+  training, tuning, threshold choice or reporting; ml/evaluate.py refuses split=test without
+  --final (phase 4 only). Features may be built for it.
+- Model inputs are Tier P features only (ml/features.py FEATURES). Never family, config,
+  seed, split, run duration, exit_reason or anything from Tier F. Tier F is for labels (t0)
+  and baselines B3/B4 only.
+- Features are causal: a row at tick t uses only Tier P samples with ts <= t (unit-tested).
+- Ambiguous runs are excluded everywhere. Fixed random seeds. Every hyperparameter, window
+  and threshold is chosen on VALIDATION.
+- Phase 3 is pure Python and runs locally: `make venv` (pinned requirements-ml.txt), then
+  `make phase3` / `python -m ml.phase3`.
 
 ## Rules
 - Linux x86-64 only (WSL2 Ubuntu is fine). C11, gcc, `-Wall -Wextra -O2`, zero warnings
@@ -30,4 +43,6 @@ Full specification: docs/LockPulse_Guide.md — read it before any non-trivial c
 - Every run writes metadata (family, params, seed, tags, exit reason, runner image,
   gcc/glibc/kernel versions).
 - Tier P may be used for LABELS (ml/label.py) but never as a model feature in phase 2.
-- Python: standard library + pandas only in phase 2.
+- Python: standard library + pandas for the collection/label scripts; phase 3 adds numpy,
+  scikit-learn and joblib (pinned in requirements-ml.txt). ml/tests must run with numpy +
+  pandas only (CI has no scikit-learn).
