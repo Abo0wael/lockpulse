@@ -112,7 +112,7 @@ def run_timing(meta):
 def thread_matrices(tierp, end_ns=None):
     """Tier P rows -> tick x thread matrices (ticks sorted, ts <= end_ns).
 
-    Returns dict: ts (T,), present/S/futex/sleepio (T, N) bool,
+    Returns dict: ts (T,), tids (N,), present/S/futex/sleepio (T, N) bool,
     cpu/vcs/nvcs (T, N) float with NaN where the thread is not live."""
     df = tierp
     if end_ns is not None:
@@ -139,6 +139,7 @@ def thread_matrices(tierp, end_ns=None):
 
     return {
         "ts": ts,
+        "tids": tids,
         "present": bmat(np.ones(len(df), dtype=bool)),
         "S": bmat(state == "S"),
         "futex": bmat(sc == FUTEX),

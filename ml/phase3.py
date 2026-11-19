@@ -95,7 +95,7 @@ def detector_table(split, labels, feats, base, settings, models):
     lab = labels.set_index("run_id")
     pr_rows = feats[PR_AUC_W]
     pr_rows = pr_rows[pr_rows["split"] == split][["run_id", "family", "ts_ns", "y"]]
-    rows, tol_rows = [], []
+    rows, tol_rows, alert_log = [], [], []
 
     def add(detector, tier, setting, alert_rows, pr_scores=None):
         pr = {}
@@ -104,6 +104,11 @@ def detector_table(split, labels, feats, base, settings, models):
             pr["overall"] = E.pr_auc(d["y"], d["_s"])
             for fam, g in d.groupby("family"):
                 pr[fam] = E.pr_auc(g["y"], g["_s"])
+        for a in alert_rows:
+            kind, delay = E.outcome(a["hang"], a["t0"], a["alert"])
+            alert_log.append({"detector": detector.split()[0], "run_id": a["run_id"], "family": a["family"],
+                              "hang": a["hang"], "t0_ns": a["t0"], "alert_ns": a["alert"], "outcome": kind,
+                              "delay_ms": delay})
         strict = {m["scope"]: m for m in E.per_family_metrics(alert_rows, tol_ns=0)}
         for m in E.per_family_metrics(alert_rows):
             s0 = strict[m["scope"]]
@@ -114,7 +119,7 @@ def detector_table(split, labels, feats, base, settings, models):
             rows.append(dict(detector=detector, input=tier, setting=setting, pr_auc=pr.get(m["scope"], np.nan), **m))
 
     def alerts_from(runs, threshold):
-        return [{"family": r.family, "hang": r.hang, "t0": r.t0,
+        return [{"run_id": r.run_id, "family": r.family, "hang": r.hang, "t0": r.t0,
                  "alert": (lambda a: None if a < 0 else int(a))(r.alert_ns([threshold])[0])} for r in runs]
 
     # baselines
@@ -124,7 +129,7 @@ def detector_table(split, labels, feats, base, settings, models):
         th = settings[key]["T_ms"]
         add(label, "Tier P", "T={:.0f} ms".format(th), alerts_from(baseline_runscores(base, labels, key), th),
             merged[key].to_numpy())
-    b3 = [{"family": lab.loc[rid, "family"], "hang": int(lab.loc[rid, "hang"]),
+    b3 = [{"run_id": rid, "family": lab.loc[rid, "family"], "hang": int(lab.loc[rid, "hang"]),
            "t0": int(lab.loc[rid, "t0_ns"]) if int(lab.loc[rid, "hang"]) else None, "alert": a}
           for rid, (_t, a) in base.items()]
     add("B3 wait-for graph", "Tier F", "no threshold (cycle at MUTEX_REQ)", b3)
@@ -146,7 +151,7 @@ def detector_table(split, labels, feats, base, settings, models):
         add("{} {}".format(name, T.MODEL_NAMES[name]), "Tier P", setting, alerts_from(runs, s["threshold"]), pr_s)
 
     table = pd.DataFrame(rows)[E.TABLE_COLUMNS]
-    return table, pd.DataFrame(tol_rows)
+    return table, pd.DataFrame(tol_rows), pd.DataFrame(alert_log)
 
 
 def feature_importance(settings, models, feats, split="validation", n_rows=20000):
@@ -220,7 +225,7 @@ def run(data=None, features_dir=None, out=None, rebuild=False):
     for name, c in chosen.items():
         settings[name] = {k: c[k] for k in ("W", "params", "threshold", "feasible")}
         models[name] = c["model"]
-    table, tol_effect = detector_table("validation", labels, feats, base, settings, models)
+    table, tol_effect, _alerts = detector_table("validation", labels, feats, base, settings, models)
     fi = feature_importance(settings, models, feats)
     timing["evaluate_s"] = round(time.monotonic() - t, 1)
     timing["total_s"] = round(time.monotonic() - t_start, 1)
@@ -267,33 +272,53 @@ def run(data=None, features_dir=None, out=None, rebuild=False):
     return table
 
 
-def evaluate_saved(split="validation", final=False, data=None, features_dir=None, out=None):
-    """Re-evaluate the saved phase-3 detectors on a split (test needs final=True)."""
+def evaluate_saved(split="validation", final=False, data=None, features_dir=None, out=None, models_dir=None,
+                   quiet=False):
+    """Evaluate the saved phase-3 detectors on a split (test needs final=True).
+
+    Settings and models come from models_dir (default results/phase3). With
+    final=True the freeze record (results/phase4/frozen.json) is verified first,
+    so only the frozen files can be evaluated on test; output then defaults to
+    results/phase4. Returns (table, tolerance-effect table)."""
     import joblib
     E.check_split(split, final)
     _utf8_stdout()
+    models_dir = Path(models_dir) if models_dir else ROOT / "results" / "phase3"
+    if final:
+        from ml import freeze
+        rec = freeze.verify()
+        print("freeze verified (settings commit {})".format(rec["settings_commit"][:12]))
     data = Path(data) if data else F.default_data_dir()
     features_dir = Path(features_dir) if features_dir else ROOT / "data" / "processed"
-    out = Path(out) if out else ROOT / "results" / "phase3"
-    meta = json.loads((out / "chosen.json").read_text())
+    out = Path(out) if out else (ROOT / "results" / ("phase4" if final else "phase3"))
+    meta = json.loads((models_dir / "chosen.json").read_text())
     settings = meta["settings"]
     settings["_final"] = final
-    models = {n: joblib.load(out / "models" / "{}.joblib".format(n)) for n in ("M1", "M2", "M3")}
+    models = {n: joblib.load(models_dir / "models" / "{}.joblib".format(n)) for n in ("M1", "M2", "M3")}
     feats = {W: F.load_features(features_dir, W) for W in F.WINDOWS}
     labels, n_amb = F.load_labels(data)
     feats = apply_label_splits(feats, labels)
     lab = labels[labels["split"] == split].reset_index(drop=True)
     base = B.compute_baselines(data, lab)
-    table, tol_effect = detector_table(split, labels, feats, base, settings, models)
-    tol_effect.to_csv(Path(out) / "{}_tolerance_effect.csv".format(split), index=False, lineterminator="\n")
-    header = ["Split: {}; ambiguous excluded: {}. Settings from chosen.json (picked on validation).".format(
-        split, n_amb)]
+    table, tol_effect, alerts = detector_table(split, labels, feats, base, settings, models)
+    out.mkdir(parents=True, exist_ok=True)
+    tol_effect.to_csv(out / "{}_tolerance_effect.csv".format(split), index=False, lineterminator="\n")
+    fams = ", ".join(sorted(lab["family"].unique()))
+    header = ["Split: {} ({}). Runs: {}; ambiguous excluded (all splits): {}.".format(split, fams, len(lab), n_amb),
+              "Settings and models: {} (picked on validation{}).".format(
+                  models_dir.relative_to(ROOT) if models_dir.is_relative_to(ROOT) else models_dir,
+                  "; frozen, hashes verified" if final else ""),
+              "Alert policy: first tick where the score has been >= threshold for {} consecutive ticks; an alert "
+              "is on time if it comes at or after t0 - {:.0f} ms.".format(E.K_CONSECUTIVE,
+                                                                       E.ONSET_TOLERANCE_NS / 1e6)]
     if split == "train":
         header.append("DIAGNOSTIC ONLY: M1-M3 were fitted on these runs (in-sample scores); the rules B1-B4 "
                       "were not. Nothing in this table was used for any choice.")
     write_tables(table, out, split, header)
-    print(E.format_markdown(table))
-    return 0
+    if not quiet:
+        print(E.format_markdown(table))
+    alerts.to_csv(out / "{}_alerts.csv".format(split), index=False, lineterminator=chr(10))
+    return table, tol_effect, alerts
 
 
 def main(argv=None):

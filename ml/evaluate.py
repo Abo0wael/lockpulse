@@ -216,11 +216,13 @@ def main(argv=None):
     ap.add_argument("--final", action="store_true", help="phase 4 only: allow split=test")
     ap.add_argument("--data", default=None)
     ap.add_argument("--features-dir", default=None)
-    ap.add_argument("--out", default=None)
+    ap.add_argument("--out", default=None, help="default: results/phase4 with --final, else results/phase3")
+    ap.add_argument("--models-dir", default=None, help="settings + models (default: results/phase3)")
     args = ap.parse_args(argv)
     check_split(args.split, args.final)
     from ml import phase3  # late import: phase3 imports this module
-    return phase3.evaluate_saved(args.split, args.final, args.data, args.features_dir, args.out)
+    phase3.evaluate_saved(args.split, args.final, args.data, args.features_dir, args.out, args.models_dir)
+    return 0
 
 
 if __name__ == "__main__":
