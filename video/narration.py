@@ -1,8 +1,10 @@
-"""Arabic (Egyptian) narration for the LockPulse explainer: one MP3 per scene via edge-tts.
+"""Narration for the LockPulse explainer: one MP3 per scene via edge-tts.
 
-  python video/narration.py        # writes video/out/audio/sNN.mp3 + durations.json
+  python video/narration.py [--lang en|ar]   # writes video/out/audio_<lang>/sNN.mp3 + durations.json
 
-Voice ar-EG-ShakirNeural, rate -5%. Technical words stay in English exactly as written.
+en (default): English, voice en-US-GuyNeural, rate -5%. Some words are spelled for speech
+              ("slash proc", "I-O", "L-D PRELOAD") so the voice pronounces them right.
+ar:           Egyptian Arabic, voice ar-EG-ShakirNeural, rate -5% (technical words in English).
 """
 import asyncio
 import json
@@ -12,11 +14,53 @@ import subprocess
 import sys
 
 OUT = os.path.join(os.path.dirname(os.path.abspath(__file__)), "out")
-AUDIO = os.path.join(OUT, "audio")
-VOICE = "ar-EG-ShakirNeural"
-RATE = "-5%"
+VOICES = {"en": ("en-US-GuyNeural", "-5%"), "ar": ("ar-EG-ShakirNeural", "-5%")}
+# (en-US-AndrewNeural returned no audio for most requests on 2026-11-19; en-US-BrianNeural also works.)
 
-SCRIPT = [
+
+def audio_dir(lang):
+    return os.path.join(OUT, "audio_" + lang)
+
+
+SCRIPT_EN = [
+    "This is LockPulse, our System Programming project. In one sentence: we detect when a multithreaded C "
+    "program has hung, without touching the program itself.",
+    "Picture two threads. Thread one holds lock A and waits for lock B. Thread two holds lock B and waits for "
+    "lock A. Each one waits for the other, forever. That's a deadlock. The program doesn't crash, and it prints "
+    "no error. It just stops. And some hangs have no lock cycle at all: a wake-up signal that gets lost, or a "
+    "semaphore that nobody ever posts.",
+    "The usual approaches have problems. A timeout has to wait for seconds, and it raises false alarms when "
+    "threads are simply sleeping, or waiting for I-O. A wait-for graph has to instrument every lock in the "
+    "program, and it can't see any hang without a lock cycle. So our question was: can we detect hangs quickly, "
+    "cheaply, and without modifying the program?",
+    "We built a system that watches the same run from two angles. The first is Tier P: a sampler that reads "
+    "slash proc every five milliseconds, and records each thread's state, its CPU time, its context switches, "
+    "and the system call it is blocked in. That is the only thing the detector ever sees. The second is Tier F: "
+    "an L-D PRELOAD library that logs every lock, condition variable, semaphore and barrier call. We use it only "
+    "to establish the ground truth, and to grade the detectors.",
+    "We built a benchmark of thirteen scenarios: seven that hang, and six that run normally, although some of "
+    "them look a lot like a hang from the outside. We ran them seven hundred and eighty times, including three "
+    "hundred and eighty-one hangs. We split the scenarios into training, validation and test, and we opened the "
+    "test scenarios only once, at the very end.",
+    "We compared seven detectors: four rules, two on Tier P and two on Tier F, and three machine-learning "
+    "models. Every threshold was chosen on the validation set, and frozen before the test.",
+    "Here are the results, on one hundred and eighty runs that no detector had seen before. The timeouts have "
+    "to wait a second and a half, and they still raise false alarms on runs that are waiting for I-O. The "
+    "wait-for graph catches deadlocks instantly, but it misses every hang that doesn't involve locks. The futex "
+    "rule, the random forest, and gradient boosting caught every single hang, in about fifty to seventy "
+    "milliseconds, with zero false alarms.",
+    "So what's the secret? The system call a stuck thread is waiting in. If it's blocked in futex, it's waiting "
+    "for a lock or a signal, and that is suspicious. If it's in read, or sleep, it's doing something normal. "
+    "When we removed that information, the models caught no hangs at all. And reading slash proc costs almost "
+    "nothing, unlike Tier F.",
+    "To sum up: a system that detects hangs fast, almost for free, and sees hangs that a wait-for graph can't. "
+    "And the honest result: on this benchmark, a simple rule matched machine learning. Next, we'll test harder "
+    "scenarios, like an idle thread pool, to see whether machine learning makes a difference, and then write a "
+    "research paper.",
+    "That was LockPulse. All the code is on GitHub. Thank you.",
+]
+
+SCRIPT_AR = [
     "ده LockPulse، مشروع System Programming بتاعنا. الفكرة باختصار: نكتشف إن برنامج C فيه threads كتير علّق، من غير ما نلمس البرنامج نفسه.",
     "تخيّل threadين: الأول ماسك Lock A ومستني Lock B، والتاني ماسك Lock B ومستني Lock A. كل واحد مستني التاني للأبد، وده اسمه deadlock. البرنامج مبيقعش ومبيطلّعش error، هو بس بيقف. وفيه hangs تانية مفيهاش دايرة locks أصلًا، زي signal ضاع، أو semaphore محدش عمله post.",
     "الطرق المعروفة ليها مشاكل. الـ timeout بيستنى ثواني، وبيدّي إنذار غلط لو الـ threads نايمة أو مستنية I/O. والـ wait-for graph محتاج نراقب كل lock في البرنامج، ومبيشوفش أي hang مفيهوش دايرة locks. فسؤالنا كان: نقدر نكتشف الـ hang بسرعة، وبتكلفة قليلة، ومن غير ما نعدّل البرنامج؟",
@@ -49,18 +93,33 @@ def duration_s(path):
     return int(h) * 3600 + int(m) * 60 + float(s)
 
 
-async def synth(i, text):
+async def synth(i, text, lang):
     import edge_tts
-    path = os.path.join(AUDIO, "s{:02d}.mp3".format(i + 1))
-    await edge_tts.Communicate(text, VOICE, rate=RATE).save(path)
-    return path
+    voice, rate = VOICES[lang]
+    path = os.path.join(audio_dir(lang), "s{:02d}.mp3".format(i + 1))
+    for attempt in range(4):
+        try:
+            await edge_tts.Communicate(text, voice, rate=rate).save(path)
+            return path
+        except edge_tts.exceptions.NoAudioReceived:
+            if attempt == 3:
+                raise
+            print("  no audio for scene {} (attempt {}), retrying".format(i + 1, attempt + 1), flush=True)
+            await asyncio.sleep(2 * (attempt + 1))
 
 
-def main():
+def main(argv=None):
+    import argparse
+    ap = argparse.ArgumentParser(description="Generate the scene narration MP3s.")
+    ap.add_argument("--lang", choices=sorted(VOICES), default="en")
+    lang = ap.parse_args(argv).lang
+    script = SCRIPT_EN if lang == "en" else SCRIPT_AR
+    AUDIO = audio_dir(lang)
     os.makedirs(AUDIO, exist_ok=True)
+    print("voice {} rate {}".format(*VOICES[lang]))
     durs = {}
-    for i, text in enumerate(SCRIPT):
-        path = asyncio.run(synth(i, text))
+    for i, text in enumerate(script):
+        path = asyncio.run(synth(i, text, lang))
         durs["s{:02d}".format(i + 1)] = round(duration_s(path), 3)
         print("s{:02d}: {:.2f} s".format(i + 1, durs["s{:02d}".format(i + 1)]), flush=True)
     with open(os.path.join(AUDIO, "durations.json"), "w", encoding="utf-8") as fh:
