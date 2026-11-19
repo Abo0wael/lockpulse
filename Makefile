@@ -34,7 +34,8 @@ SEEDS    ?=
 COLLECT_ARGS := $(if $(FAMILY),--family $(FAMILY)) $(if $(SEEDS),--seeds $(SEEDS))
 
 .PHONY: all shim launcher bench tools selftest clean \
-        check-phase1 check-phase2 check-shim test-ml collect labels review overhead
+        check-phase1 check-phase2 check-shim test-ml collect labels review overhead \
+        venv phase3
 
 all: shim launcher bench tools selftest
 
@@ -90,6 +91,18 @@ review: labels
 
 overhead: all
 >$(PYTHON) scripts/overhead.py
+
+# ---- phase 3: features and models (pure Python, runs on any OS) -------------
+# Uses the pinned venv (.venv) if present: make venv && make phase3
+VENV_PY := $(firstword $(wildcard .venv/bin/python .venv/Scripts/python.exe))
+ML_PY   := $(if $(VENV_PY),$(VENV_PY),$(PYTHON))
+
+venv:
+>$(PYTHON) -m venv .venv
+>$(firstword $(wildcard .venv/bin/python .venv/Scripts/python.exe)) -m pip install -r requirements-ml.txt
+
+phase3:
+>$(ML_PY) -m ml.phase3
 
 # Never touches data/: raw data is immutable.
 clean:

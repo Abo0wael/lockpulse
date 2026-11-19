@@ -57,6 +57,24 @@ jobs:
           if-no-files-found: warn
           retention-days: 14
 
+  ml-tests:
+    # Unit tests of the Python pipeline (labels, features, baselines, alert policy,
+    # threshold rule) on synthetic fixtures; no data, no scikit-learn needed.
+    runs-on: ubuntu-26.04
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v7
+
+      - name: Install toolchain (bounded, non-interactive)
+        timeout-minutes: 5
+        env:
+          DEBIAN_FRONTEND: noninteractive
+          NEEDRESTART_MODE: a
+        run: bash .github/ci-install.sh python
+
+      - name: make test-ml
+        run: make test-ml
+
   phase2:
     runs-on: ubuntu-26.04
     timeout-minutes: 10

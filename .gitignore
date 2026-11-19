@@ -2,6 +2,13 @@
 build/
 dist/
 
+# downloaded datasets (e.g. data/collect1/ from the collect workflow) and the ML venv
+data/collect*/
+.venv/
+
+# phase-3 fitted models (binary, scikit-learn-version specific; rebuilt by make phase3)
+results/phase3/models/
+
 # data: directory skeleton is tracked, contents are not
 data/raw/*/*
 !data/raw/*/.gitkeep
