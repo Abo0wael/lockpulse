@@ -1,0 +1,50 @@
+detector,input,setting,scope,runs,hang_runs,detected,detection_rate,delay_median_ms,delay_p90_ms,fa_healthy,fa_early,fa_rate,pr_auc
+B1 fixed timeout,Tier P,T=50 ms,overall,359,170,170,1.0000,58.5360,63.8855,60,0,0.1671,0.9670
+B1 fixed timeout,Tier P,T=50 ms,high_contention,60,0,0,,,,0,0,0.0000,
+B1 fixed timeout,Tier P,T=50 ms,long_critical_section,60,0,0,,,,0,0,0.0000,
+B1 fixed timeout,Tier P,T=50 ms,lost_wakeup,60,51,51,1.0000,57.4392,61.9214,0,0,0.0000,0.9999
+B1 fixed timeout,Tier P,T=50 ms,prodcons_missing_signal,59,59,59,1.0000,57.0406,62.1601,0,0,0.0000,1.0000
+B1 fixed timeout,Tier P,T=50 ms,sleeping_workers,60,0,0,,,,60,0,1.0000,
+B1 fixed timeout,Tier P,T=50 ms,two_lock_inversion,60,60,60,1.0000,60.9568,66.3394,0,0,0.0000,0.9999
+B2 futex silence,Tier P,T=50 ms,overall,359,170,170,1.0000,63.8422,68.8888,0,0,0.0000,0.9991
+B2 futex silence,Tier P,T=50 ms,high_contention,60,0,0,,,,0,0,0.0000,
+B2 futex silence,Tier P,T=50 ms,long_critical_section,60,0,0,,,,0,0,0.0000,
+B2 futex silence,Tier P,T=50 ms,lost_wakeup,60,51,51,1.0000,63.3337,66.9155,0,0,0.0000,0.9997
+B2 futex silence,Tier P,T=50 ms,prodcons_missing_signal,59,59,59,1.0000,64.1502,69.0315,0,0,0.0000,0.9998
+B2 futex silence,Tier P,T=50 ms,sleeping_workers,60,0,0,,,,0,0,0.0000,
+B2 futex silence,Tier P,T=50 ms,two_lock_inversion,60,60,60,1.0000,64.0244,68.7860,0,0,0.0000,0.9997
+B3 wait-for graph,Tier F,no threshold (cycle at MUTEX_REQ),overall,359,170,41,0.2412,0.0008,0.3240,0,19,0.0529,
+B3 wait-for graph,Tier F,no threshold (cycle at MUTEX_REQ),high_contention,60,0,0,,,,0,0,0.0000,
+B3 wait-for graph,Tier F,no threshold (cycle at MUTEX_REQ),long_critical_section,60,0,0,,,,0,0,0.0000,
+B3 wait-for graph,Tier F,no threshold (cycle at MUTEX_REQ),lost_wakeup,60,51,0,0.0000,,,0,0,0.0000,
+B3 wait-for graph,Tier F,no threshold (cycle at MUTEX_REQ),prodcons_missing_signal,59,59,0,0.0000,,,0,0,0.0000,
+B3 wait-for graph,Tier F,no threshold (cycle at MUTEX_REQ),sleeping_workers,60,0,0,,,,0,0,0.0000,
+B3 wait-for graph,Tier F,no threshold (cycle at MUTEX_REQ),two_lock_inversion,60,60,41,0.6833,0.0008,0.3240,0,19,0.3167,
+B4 progress watchdog,Tier F,T=50 ms,overall,359,170,170,1.0000,62.8642,64.7254,120,0,0.3343,
+B4 progress watchdog,Tier F,T=50 ms,high_contention,60,0,0,,,,0,0,0.0000,
+B4 progress watchdog,Tier F,T=50 ms,long_critical_section,60,0,0,,,,60,0,1.0000,
+B4 progress watchdog,Tier F,T=50 ms,lost_wakeup,60,51,51,1.0000,62.8126,64.7352,0,0,0.0000,
+B4 progress watchdog,Tier F,T=50 ms,prodcons_missing_signal,59,59,59,1.0000,62.8878,64.7937,0,0,0.0000,
+B4 progress watchdog,Tier F,T=50 ms,sleeping_workers,60,0,0,,,,60,0,1.0000,
+B4 progress watchdog,Tier F,T=50 ms,two_lock_inversion,60,60,60,1.0000,62.8217,64.4341,0,0,0.0000,
+M1 logistic regression,Tier P,"W=10 (50 ms), {""C"": 10.0}, threshold=0.8742",overall,359,170,170,1.0000,23.9781,34.8950,5,0,0.0139,0.9999
+M1 logistic regression,Tier P,"W=10 (50 ms), {""C"": 10.0}, threshold=0.8742",high_contention,60,0,0,,,,0,0,0.0000,
+M1 logistic regression,Tier P,"W=10 (50 ms), {""C"": 10.0}, threshold=0.8742",long_critical_section,60,0,0,,,,5,0,0.0833,
+M1 logistic regression,Tier P,"W=10 (50 ms), {""C"": 10.0}, threshold=0.8742",lost_wakeup,60,51,51,1.0000,22.9362,31.9144,0,0,0.0000,1.0000
+M1 logistic regression,Tier P,"W=10 (50 ms), {""C"": 10.0}, threshold=0.8742",prodcons_missing_signal,59,59,59,1.0000,14.7129,25.2349,0,0,0.0000,1.0000
+M1 logistic regression,Tier P,"W=10 (50 ms), {""C"": 10.0}, threshold=0.8742",sleeping_workers,60,0,0,,,,0,0,0.0000,
+M1 logistic regression,Tier P,"W=10 (50 ms), {""C"": 10.0}, threshold=0.8742",two_lock_inversion,60,60,60,1.0000,30.6655,38.5906,0,0,0.0000,1.0000
+M2 random forest,Tier P,"W=10 (50 ms), {""max_depth"": 6, ""min_samples_leaf"": 5}, threshold=0.5055",overall,359,170,170,1.0000,14.3465,36.0889,1,0,0.0028,1.0000
+M2 random forest,Tier P,"W=10 (50 ms), {""max_depth"": 6, ""min_samples_leaf"": 5}, threshold=0.5055",high_contention,60,0,0,,,,0,0,0.0000,
+M2 random forest,Tier P,"W=10 (50 ms), {""max_depth"": 6, ""min_samples_leaf"": 5}, threshold=0.5055",long_critical_section,60,0,0,,,,0,0,0.0000,
+M2 random forest,Tier P,"W=10 (50 ms), {""max_depth"": 6, ""min_samples_leaf"": 5}, threshold=0.5055",lost_wakeup,60,51,51,1.0000,13.7204,21.9128,0,0,0.0000,1.0000
+M2 random forest,Tier P,"W=10 (50 ms), {""max_depth"": 6, ""min_samples_leaf"": 5}, threshold=0.5055",prodcons_missing_signal,59,59,59,1.0000,12.8886,14.7901,0,0,0.0000,1.0000
+M2 random forest,Tier P,"W=10 (50 ms), {""max_depth"": 6, ""min_samples_leaf"": 5}, threshold=0.5055",sleeping_workers,60,0,0,,,,1,0,0.0167,
+M2 random forest,Tier P,"W=10 (50 ms), {""max_depth"": 6, ""min_samples_leaf"": 5}, threshold=0.5055",two_lock_inversion,60,60,60,1.0000,28.0341,39.5932,0,0,0.0000,1.0000
+M3 gradient boosting,Tier P,"W=10 (50 ms), {""learning_rate"": 0.05, ""max_leaf_nodes"": 31}, threshold=0.9874",overall,359,170,170,1.0000,13.3985,17.5389,0,0,0.0000,1.0000
+M3 gradient boosting,Tier P,"W=10 (50 ms), {""learning_rate"": 0.05, ""max_leaf_nodes"": 31}, threshold=0.9874",high_contention,60,0,0,,,,0,0,0.0000,
+M3 gradient boosting,Tier P,"W=10 (50 ms), {""learning_rate"": 0.05, ""max_leaf_nodes"": 31}, threshold=0.9874",long_critical_section,60,0,0,,,,0,0,0.0000,
+M3 gradient boosting,Tier P,"W=10 (50 ms), {""learning_rate"": 0.05, ""max_leaf_nodes"": 31}, threshold=0.9874",lost_wakeup,60,51,51,1.0000,13.3161,16.9140,0,0,0.0000,1.0000
+M3 gradient boosting,Tier P,"W=10 (50 ms), {""learning_rate"": 0.05, ""max_leaf_nodes"": 31}, threshold=0.9874",prodcons_missing_signal,59,59,59,1.0000,12.8886,14.7901,0,0,0.0000,1.0000
+M3 gradient boosting,Tier P,"W=10 (50 ms), {""learning_rate"": 0.05, ""max_leaf_nodes"": 31}, threshold=0.9874",sleeping_workers,60,0,0,,,,0,0,0.0000,
+M3 gradient boosting,Tier P,"W=10 (50 ms), {""learning_rate"": 0.05, ""max_leaf_nodes"": 31}, threshold=0.9874",two_lock_inversion,60,60,60,1.0000,13.8306,30.9052,0,0,0.0000,1.0000

@@ -1,0 +1,36 @@
+detector,input,setting,scope,runs,hang_runs,detected,detection_rate,delay_median_ms,delay_p90_ms,fa_healthy,fa_early,fa_rate,pr_auc
+B1 fixed timeout,Tier P,T=50 ms,overall,240,120,120,1.0000,61.1129,70.3558,0,0,0.0000,0.9993
+B1 fixed timeout,Tier P,T=50 ms,barrier_mismatch,60,60,60,1.0000,65.3848,74.5773,0,0,0.0000,0.9997
+B1 fixed timeout,Tier P,T=50 ms,consistent_lock_order,60,0,0,,,,0,0,0.0000,
+B1 fixed timeout,Tier P,T=50 ms,prodcons_correct,60,0,0,,,,0,0,0.0000,
+B1 fixed timeout,Tier P,T=50 ms,three_thread_cycle,60,60,60,1.0000,59.2279,63.4672,0,0,0.0000,0.9999
+B2 futex silence,Tier P,T=50 ms,overall,240,120,120,1.0000,66.3181,75.2401,0,0,0.0000,0.9988
+B2 futex silence,Tier P,T=50 ms,barrier_mismatch,60,60,60,1.0000,70.8961,79.3544,0,0,0.0000,0.9996
+B2 futex silence,Tier P,T=50 ms,consistent_lock_order,60,0,0,,,,0,0,0.0000,
+B2 futex silence,Tier P,T=50 ms,prodcons_correct,60,0,0,,,,0,0,0.0000,
+B2 futex silence,Tier P,T=50 ms,three_thread_cycle,60,60,60,1.0000,62.5216,68.8191,0,0,0.0000,0.9997
+B3 wait-for graph,Tier F,no threshold (cycle at MUTEX_REQ),overall,240,120,51,0.4250,0.0008,0.3511,0,9,0.0375,
+B3 wait-for graph,Tier F,no threshold (cycle at MUTEX_REQ),barrier_mismatch,60,60,0,0.0000,,,0,0,0.0000,
+B3 wait-for graph,Tier F,no threshold (cycle at MUTEX_REQ),consistent_lock_order,60,0,0,,,,0,0,0.0000,
+B3 wait-for graph,Tier F,no threshold (cycle at MUTEX_REQ),prodcons_correct,60,0,0,,,,0,0,0.0000,
+B3 wait-for graph,Tier F,no threshold (cycle at MUTEX_REQ),three_thread_cycle,60,60,51,0.8500,0.0008,0.3511,0,9,0.1500,
+B4 progress watchdog,Tier F,T=50 ms,overall,240,120,120,1.0000,62.4175,64.7223,0,0,0.0000,
+B4 progress watchdog,Tier F,T=50 ms,barrier_mismatch,60,60,60,1.0000,63.1571,64.8409,0,0,0.0000,
+B4 progress watchdog,Tier F,T=50 ms,consistent_lock_order,60,0,0,,,,0,0,0.0000,
+B4 progress watchdog,Tier F,T=50 ms,prodcons_correct,60,0,0,,,,0,0,0.0000,
+B4 progress watchdog,Tier F,T=50 ms,three_thread_cycle,60,60,60,1.0000,62.3243,64.0403,0,0,0.0000,
+M1 logistic regression,Tier P,"W=10 (50 ms), {""C"": 10.0}, threshold=0.8742",overall,240,120,120,1.0000,39.4436,58.1781,0,0,0.0000,0.9996
+M1 logistic regression,Tier P,"W=10 (50 ms), {""C"": 10.0}, threshold=0.8742",barrier_mismatch,60,60,60,1.0000,54.2372,60.6320,0,0,0.0000,0.9998
+M1 logistic regression,Tier P,"W=10 (50 ms), {""C"": 10.0}, threshold=0.8742",consistent_lock_order,60,0,0,,,,0,0,0.0000,
+M1 logistic regression,Tier P,"W=10 (50 ms), {""C"": 10.0}, threshold=0.8742",prodcons_correct,60,0,0,,,,0,0,0.0000,
+M1 logistic regression,Tier P,"W=10 (50 ms), {""C"": 10.0}, threshold=0.8742",three_thread_cycle,60,60,60,1.0000,31.1517,44.2937,0,0,0.0000,1.0000
+M2 random forest,Tier P,"W=10 (50 ms), {""max_depth"": 6, ""min_samples_leaf"": 5}, threshold=0.5055",overall,240,120,120,1.0000,44.7308,57.0406,0,0,0.0000,0.9995
+M2 random forest,Tier P,"W=10 (50 ms), {""max_depth"": 6, ""min_samples_leaf"": 5}, threshold=0.5055",barrier_mismatch,60,60,60,1.0000,53.9538,59.3550,0,0,0.0000,0.9999
+M2 random forest,Tier P,"W=10 (50 ms), {""max_depth"": 6, ""min_samples_leaf"": 5}, threshold=0.5055",consistent_lock_order,60,0,0,,,,0,0,0.0000,
+M2 random forest,Tier P,"W=10 (50 ms), {""max_depth"": 6, ""min_samples_leaf"": 5}, threshold=0.5055",prodcons_correct,60,0,0,,,,0,0,0.0000,
+M2 random forest,Tier P,"W=10 (50 ms), {""max_depth"": 6, ""min_samples_leaf"": 5}, threshold=0.5055",three_thread_cycle,60,60,60,1.0000,30.5032,51.0764,0,0,0.0000,1.0000
+M3 gradient boosting,Tier P,"W=10 (50 ms), {""learning_rate"": 0.05, ""max_leaf_nodes"": 31}, threshold=0.9874",overall,240,120,120,1.0000,47.6626,58.9994,0,0,0.0000,0.9996
+M3 gradient boosting,Tier P,"W=10 (50 ms), {""learning_rate"": 0.05, ""max_leaf_nodes"": 31}, threshold=0.9874",barrier_mismatch,60,60,60,1.0000,51.8908,64.3552,0,0,0.0000,0.9998
+M3 gradient boosting,Tier P,"W=10 (50 ms), {""learning_rate"": 0.05, ""max_leaf_nodes"": 31}, threshold=0.9874",consistent_lock_order,60,0,0,,,,0,0,0.0000,
+M3 gradient boosting,Tier P,"W=10 (50 ms), {""learning_rate"": 0.05, ""max_leaf_nodes"": 31}, threshold=0.9874",prodcons_correct,60,0,0,,,,0,0,0.0000,
+M3 gradient boosting,Tier P,"W=10 (50 ms), {""learning_rate"": 0.05, ""max_leaf_nodes"": 31}, threshold=0.9874",three_thread_cycle,60,60,60,1.0000,33.4701,56.2857,0,0,0.0000,0.9999

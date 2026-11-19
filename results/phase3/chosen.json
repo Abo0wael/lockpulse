@@ -1,0 +1,106 @@
+{
+  "split_used_for_choices": "validation",
+  "train_split": "train",
+  "test_split_used": false,
+  "runs_per_split": {
+    "test": 180,
+    "train": 359,
+    "validation": 240
+  },
+  "ambiguous_excluded": 1,
+  "validation_families": [
+    "barrier_mismatch",
+    "consistent_lock_order",
+    "prodcons_correct",
+    "three_thread_cycle"
+  ],
+  "alert_policy": "first tick where the score has been >= threshold for 3 consecutive ticks",
+  "threshold_rule": "max detection rate s.t. false-alarm rate <= 5%; tie-break lower median delay",
+  "features": [
+    "frac_S",
+    "frac_futex",
+    "frac_futex_whole",
+    "frac_sleepio",
+    "cpu_util_sum",
+    "cpu_util_max",
+    "vcsw_rate",
+    "nvcsw_rate",
+    "vcsw_rate_change",
+    "nvcsw_rate_change",
+    "futex_silence_ms",
+    "live_threads",
+    "live_change"
+  ],
+  "windows": [
+    10,
+    20,
+    40
+  ],
+  "train_stride": 4,
+  "random_state": 0,
+  "baseline_T_grid_ms": [
+    50,
+    100,
+    200,
+    300,
+    500,
+    750,
+    1000,
+    1500,
+    2000
+  ],
+  "settings": {
+    "B1": {
+      "T_ms": 50.0,
+      "feasible": true
+    },
+    "B2": {
+      "T_ms": 50.0,
+      "feasible": true
+    },
+    "B4": {
+      "T_ms": 50.0,
+      "feasible": true
+    },
+    "M1": {
+      "W": 10,
+      "params": {
+        "C": 10.0
+      },
+      "threshold": 0.8741562456184335,
+      "feasible": true
+    },
+    "M2": {
+      "W": 10,
+      "params": {
+        "max_depth": 6,
+        "min_samples_leaf": 5
+      },
+      "threshold": 0.5055148465092493,
+      "feasible": true
+    },
+    "M3": {
+      "W": 10,
+      "params": {
+        "learning_rate": 0.05,
+        "max_leaf_nodes": 31
+      },
+      "threshold": 0.9874456053622448,
+      "feasible": true
+    }
+  },
+  "versions": {
+    "python": "3.14.6",
+    "numpy": "2.4.6",
+    "pandas": "2.3.3",
+    "scikit-learn": "1.9.0",
+    "platform": "Windows-11-10.0.26300-SP0"
+  },
+  "runtime_s": {
+    "features_s": 63.5,
+    "baselines_s": 5.1,
+    "train_s": 63.4,
+    "evaluate_s": 9.2,
+    "total_s": 141.3
+  }
+}
