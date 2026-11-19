@@ -6,8 +6,7 @@ dist/
 data/collect*/
 .venv/
 
-# phase-3 fitted models (binary, scikit-learn-version specific; rebuilt by make phase3)
-results/phase3/models/
+# phase-3 models are committed: they are the frozen detectors for phase 4 (results/phase4/FROZEN.md)
 
 # data: directory skeleton is tracked, contents are not
 data/raw/*/*
