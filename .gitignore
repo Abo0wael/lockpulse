@@ -33,3 +33,6 @@ __pycache__/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# generated explainer video, narration and stills (python video/narration.py && python video/make_video.py)
+video/out/
