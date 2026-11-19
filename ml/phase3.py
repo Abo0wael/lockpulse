@@ -170,9 +170,9 @@ def feature_importance(settings, models, feats, split="validation", n_rows=20000
 def write_tables(table, out, split, header_lines):
     out = Path(out)
     out.mkdir(parents=True, exist_ok=True)
-    table.to_csv(out / "{}_table.csv".format(split), index=False, float_format="%.4f")
+    table.to_csv(out / "{}_table.csv".format(split), index=False, float_format="%.4f", lineterminator="\n")
     md = ["# LockPulse phase 3 - {} results".format(split), ""] + header_lines + ["", E.format_markdown(table), ""]
-    (out / "{}_table.md".format(split)).write_text("\n".join(md), encoding="utf-8")
+    (out / "{}_table.md".format(split)).write_text("\n".join(md), encoding="utf-8", newline="\n")
 
 
 def versions():
@@ -239,12 +239,12 @@ def run(data=None, features_dir=None, out=None, rebuild=False):
         "random_state": T.RANDOM_STATE, "baseline_T_grid_ms": list(B.T_GRID_MS),
         "settings": settings, "versions": versions(), "runtime_s": timing,
     }
-    (out / "chosen.json").write_text(json.dumps(meta, indent=2, default=float), encoding="utf-8")
+    (out / "chosen.json").write_text(json.dumps(meta, indent=2, default=float), encoding="utf-8", newline="\n")
     pd.DataFrame([dict(model=n, **{k: v for k, v in c.items() if k != "metrics"}, **c["metrics"])
-                  for n, ch in chosen.items() for c in ch["search"]]).to_csv(out / "model_search.csv", index=False)
-    sweeps.to_csv(out / "baseline_sweeps.csv", index=False)
-    fi.to_csv(out / "feature_importance.csv", index=False)
-    tol_effect.to_csv(out / "validation_tolerance_effect.csv", index=False)
+                  for n, ch in chosen.items() for c in ch["search"]]).to_csv(out / "model_search.csv", index=False, lineterminator="\n")
+    sweeps.to_csv(out / "baseline_sweeps.csv", index=False, lineterminator="\n")
+    fi.to_csv(out / "feature_importance.csv", index=False, lineterminator="\n")
+    tol_effect.to_csv(out / "validation_tolerance_effect.csv", index=False, lineterminator="\n")
     header = ["Split: validation ({}). Runs: {}; ambiguous excluded: {}.".format(
                   ", ".join(meta["validation_families"]), counts.get("validation"), n_amb),
               "Alert policy: {}. Threshold rule: {}. An alert is on time if it comes at or after t0 - {:.0f} ms "
@@ -285,7 +285,7 @@ def evaluate_saved(split="validation", final=False, data=None, features_dir=None
     lab = labels[labels["split"] == split].reset_index(drop=True)
     base = B.compute_baselines(data, lab)
     table, tol_effect = detector_table(split, labels, feats, base, settings, models)
-    tol_effect.to_csv(Path(out) / "{}_tolerance_effect.csv".format(split), index=False)
+    tol_effect.to_csv(Path(out) / "{}_tolerance_effect.csv".format(split), index=False, lineterminator="\n")
     header = ["Split: {}; ambiguous excluded: {}. Settings from chosen.json (picked on validation).".format(
         split, n_amb)]
     if split == "train":

@@ -39,7 +39,7 @@ def write():
     settings_commit = git("log", "-1", "--format=%H", "--", "results/phase3/chosen.json")
     PHASE4.mkdir(parents=True, exist_ok=True)
     rec = {"settings_commit": settings_commit, "sha256": hashes}
-    (PHASE4 / "frozen.json").write_text(json.dumps(rec, indent=2) + "\n", encoding="utf-8")
+    (PHASE4 / "frozen.json").write_text(json.dumps(rec, indent=2) + "\n", encoding="utf-8", newline="\n")
     md = ["# Frozen phase-3 detectors", "",
           "These files were frozen **before** any test-split evaluation. Phase 4 (`python -m ml.phase4`,",
           "`python -m ml.evaluate --split test --final`) verifies every hash below before loading, and",
@@ -49,7 +49,7 @@ def write():
           "  byte-identical to a fresh `python -m ml.phase3` retrain (verified before freezing).", "",
           "| file | SHA-256 |", "|---|---|"]
     md += ["| `{}` | `{}` |".format(f, h) for f, h in hashes.items()]
-    (PHASE4 / "FROZEN.md").write_text("\n".join(md) + "\n", encoding="utf-8")
+    (PHASE4 / "FROZEN.md").write_text("\n".join(md) + "\n", encoding="utf-8", newline="\n")
     return rec
 
 
