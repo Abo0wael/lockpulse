@@ -89,6 +89,14 @@ class DeadlockTest(unittest.TestCase):
         self.assertEqual((row["hang"], row["deadlock"], row["ambiguous"]), (1, 0, 0), row["reason"])
 
 
+class SplitSourceTest(unittest.TestCase):
+    def test_config_split_wins_over_collection_tag(self):
+        # the run was collected as train (tag) but the configuration now says validation
+        row = label.label_run(meta("exited_ok"), None, None, split="validation")
+        self.assertEqual(row["split"], "validation")
+        self.assertEqual(label.label_run(meta("exited_ok"), None, None)["split"], "train")  # tag fallback
+
+
 class LostWakeupTest(unittest.TestCase):
     def test_waiter_pending_in_cond_wait(self):
         f = tierf((10, T1, "MUTEX_ACQ", M), (11, T1, "COND_SIGNAL", C), (12, T1, "MUTEX_REL", M),

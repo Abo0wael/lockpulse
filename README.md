@@ -79,8 +79,8 @@ Seeds drive start offsets and work jitter, so different seeds give genuinely dif
 | `sem_never_posted` | test | hang | The poster exits before posting all items; workers block in `sem_wait`. |
 | `high_contention` | train | healthy | 4–16 threads share one mutex at ~90 % utilisation for 1.5–3 s, with per-iteration think time; about 50k Tier F events per run. |
 | `long_critical_section` | train | healthy, hard negative | One thread busy-holds a lock for 1.0–2.5 s while the others block. |
-| `consistent_lock_order` | validation | healthy | 2–3 of L locks are always taken in the global order. |
-| `sleeping_workers` | train | healthy, hard negative | All threads `nanosleep` 1–2 s between two work phases. |
+| `consistent_lock_order` | train (was validation until 2026-11-19) | healthy | 2–3 of L locks are always taken in the global order. |
+| `sleeping_workers` | validation (was train until 2026-11-19) | healthy, hard negative | All threads `nanosleep` 1–2 s between two work phases. |
 | `prodcons_correct` | validation | healthy | The same buffer as above, with predicate loops and a signal per item. |
 | `blocked_on_io` | test | healthy, hard negative | Readers block in `read` on a pipe whose writer pauses 1–2 s. |
 

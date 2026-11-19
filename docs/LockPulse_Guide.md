@@ -111,12 +111,14 @@ The suite has 13 scenario families: 7 that hang and 6 hard negatives. Each famil
 | Semaphore never posted | Yes | Workers `sem_wait` on a semaphore whose poster crashes out | Test |
 | High contention | No | 16 threads (4–16) keep one mutex ~90% utilised for 1.5–3 s; most threads are blocked in futex at any moment but all make progress | Train |
 | Long critical section | No | Owner holds a lock for 1–3 s of real work, then releases | Train |
-| Consistent lock order | No | Many locks, always taken in global order | Validation |
-| Sleeping workers | No | All threads in `nanosleep` for 1–2 s, then resume | Train |
+| Consistent lock order | No | Many locks, always taken in global order | Train |
+| Sleeping workers | No | All threads in `nanosleep` for 1–2 s, then resume | Validation |
 | Producer–consumer, correct | No | Same as the buggy one, with predicate loop and signals | Validation |
 | Blocked on I/O | No | Threads `read` a pipe whose writer pauses 2 s | Test |
 
 Test families are never seen during training or tuning. All runs of one family stay in one split.
+
+Split change (2026-11-19, before any test evaluation): Sleeping workers moved from Train to Validation and Consistent lock order from Validation to Train. The original validation split had no long-pause healthy family, so threshold tuning on it chose settings that fail on such pauses. The test split is unchanged.
 
 **Ground truth (from Tier F, never from the template name)**
 

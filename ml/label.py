@@ -142,13 +142,17 @@ def _int_or_blank(v):
 
 
 def label_run(meta, tierf, tierp, split="", config_id=""):
-    """Label one run. tierf/tierp are DataFrames (or None). Returns a dict row."""
+    """Label one run. tierf/tierp are DataFrames (or None). Returns a dict row.
+
+    `split` (from the run configuration) wins over the collection-time "split"
+    tag in the metadata, so a split change in configs/phase2.json only needs a
+    re-label, not a re-collection; the tag is the fallback when no config is given."""
     tags = meta.get("tags") or {}
     params = meta.get("params") or {}
     row = {
         "run_id": meta.get("run_id", ""),
         "family": meta.get("family", ""),
-        "split": tags.get("split", split) or split,
+        "split": split or tags.get("split", ""),
         "config_id": tags.get("config_id", config_id) or config_id,
         "seed": _int_or_blank(meta.get("seed")),
         "force": _int_or_blank(params.get("force", tags.get("force"))),

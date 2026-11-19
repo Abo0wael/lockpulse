@@ -126,7 +126,8 @@
     },
     "consistent_lock_order": {
       "binary": "build/bench/consistent_lock_order",
-      "split": "validation",
+      "split": "train",
+      "_split_note": "was validation; swapped with sleeping_workers on 2026-11-19 (pre-test design fix, see results/phase3/NOTES.md)",
       "kind": "healthy",
       "configs": [
         {"id": "c1", "params": {"threads": 8,  "cs_us": 20,  "work_ms": 1500, "rate": 300, "iters": 8}},
@@ -137,7 +138,8 @@
     },
     "sleeping_workers": {
       "binary": "build/bench/sleeping_workers",
-      "split": "train",
+      "split": "validation",
+      "_split_note": "was train; swapped with consistent_lock_order on 2026-11-19 so validation has a long-pause healthy family (pre-test design fix, see results/phase3/NOTES.md)",
       "kind": "healthy",
       "configs": [
         {"id": "c1", "params": {"threads": 8,  "cs_us": 20, "work_ms": 500, "rate": 200}},
