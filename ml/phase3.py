@@ -54,6 +54,19 @@ def ensure_features(data, features_dir, rebuild):
     return {W: F.load_features(features_dir, W) for W in F.WINDOWS}
 
 
+def apply_label_splits(feats, labels):
+    """labels.csv is the authority for split (it follows configs/phase2.json); cached
+    feature files may predate a split change."""
+    split_of = labels.set_index("run_id")["split"]
+    for W, df in feats.items():
+        s = df["run_id"].map(split_of)
+        if s.isna().any():
+            raise SystemExit("features_W{} has runs that are not in labels.csv: {}".format(
+                W, sorted(df.loc[s.isna(), "run_id"].unique())[:5]))
+        df["split"] = s.to_numpy()
+    return feats
+
+
 def baseline_runscores(base, labels, key):
     lab = labels.set_index("run_id")
     runs = []
@@ -82,7 +95,7 @@ def detector_table(split, labels, feats, base, settings, models):
     lab = labels.set_index("run_id")
     pr_rows = feats[PR_AUC_W]
     pr_rows = pr_rows[pr_rows["split"] == split][["run_id", "family", "ts_ns", "y"]]
-    rows = []
+    rows, tol_rows = [], []
 
     def add(detector, tier, setting, alert_rows, pr_scores=None):
         pr = {}
@@ -91,7 +104,13 @@ def detector_table(split, labels, feats, base, settings, models):
             pr["overall"] = E.pr_auc(d["y"], d["_s"])
             for fam, g in d.groupby("family"):
                 pr[fam] = E.pr_auc(g["y"], g["_s"])
+        strict = {m["scope"]: m for m in E.per_family_metrics(alert_rows, tol_ns=0)}
         for m in E.per_family_metrics(alert_rows):
+            s0 = strict[m["scope"]]
+            tol_rows.append({"detector": detector, "scope": m["scope"], "hang_runs": m["hang_runs"],
+                             "detected_with_tolerance": m["detected"], "detected_strict": s0["detected"],
+                             "fa_early_with_tolerance": m["fa_early"], "fa_early_strict": s0["fa_early"],
+                             "detections_changed": m["detected"] - s0["detected"]})
             rows.append(dict(detector=detector, input=tier, setting=setting, pr_auc=pr.get(m["scope"], np.nan), **m))
 
     def alerts_from(runs, threshold):
@@ -127,7 +146,7 @@ def detector_table(split, labels, feats, base, settings, models):
         add("{} {}".format(name, T.MODEL_NAMES[name]), "Tier P", setting, alerts_from(runs, s["threshold"]), pr_s)
 
     table = pd.DataFrame(rows)[E.TABLE_COLUMNS]
-    return table
+    return table, pd.DataFrame(tol_rows)
 
 
 def feature_importance(settings, models, feats, split="validation", n_rows=20000):
@@ -173,6 +192,7 @@ def run(data=None, features_dir=None, out=None, rebuild=False):
     print("== 1. features ==")
     feats = ensure_features(data, features_dir, rebuild)
     labels, n_amb = F.load_labels(data)
+    feats = apply_label_splits(feats, labels)
     val = labels[labels["split"] == "validation"].reset_index(drop=True)
     counts = labels.groupby("split").size().to_dict()
     print("runs used: {} (ambiguous excluded: {}); validation: {} runs in {}".format(
@@ -200,7 +220,7 @@ def run(data=None, features_dir=None, out=None, rebuild=False):
     for name, c in chosen.items():
         settings[name] = {k: c[k] for k in ("W", "params", "threshold", "feasible")}
         models[name] = c["model"]
-    table = detector_table("validation", labels, feats, base, settings, models)
+    table, tol_effect = detector_table("validation", labels, feats, base, settings, models)
     fi = feature_importance(settings, models, feats)
     timing["evaluate_s"] = round(time.monotonic() - t, 1)
     timing["total_s"] = round(time.monotonic() - t_start, 1)
@@ -214,6 +234,7 @@ def run(data=None, features_dir=None, out=None, rebuild=False):
             E.K_CONSECUTIVE),
         "threshold_rule": "max detection rate s.t. false-alarm rate <= {:.0%}; tie-break lower median delay".format(
             E.MAX_FA_RATE),
+        "onset_tolerance_ms": E.ONSET_TOLERANCE_NS / 1e6,
         "features": F.FEATURES, "windows": list(F.WINDOWS), "train_stride": T.TRAIN_STRIDE,
         "random_state": T.RANDOM_STATE, "baseline_T_grid_ms": list(B.T_GRID_MS),
         "settings": settings, "versions": versions(), "runtime_s": timing,
@@ -223,15 +244,23 @@ def run(data=None, features_dir=None, out=None, rebuild=False):
                   for n, ch in chosen.items() for c in ch["search"]]).to_csv(out / "model_search.csv", index=False)
     sweeps.to_csv(out / "baseline_sweeps.csv", index=False)
     fi.to_csv(out / "feature_importance.csv", index=False)
+    tol_effect.to_csv(out / "validation_tolerance_effect.csv", index=False)
     header = ["Split: validation ({}). Runs: {}; ambiguous excluded: {}.".format(
                   ", ".join(meta["validation_families"]), counts.get("validation"), n_amb),
-              "Alert policy: {}. Threshold rule: {}.".format(meta["alert_policy"], meta["threshold_rule"]),
+              "Alert policy: {}. Threshold rule: {}. An alert is on time if it comes at or after t0 - {:.0f} ms "
+              "(one sampler tick); validation_tolerance_effect.csv shows what that changes.".format(
+                  meta["alert_policy"], meta["threshold_rule"], E.ONSET_TOLERANCE_NS / 1e6),
               "PR-AUC: window-level over validation ticks >= {} (common tick set); blank where a family "
               "has one class or the detector has no continuous score.".format(PR_AUC_W)]
     write_tables(table, out, "validation", header)
 
     print("")
     print(E.format_markdown(table))
+    print("")
+    te = tol_effect[tol_effect["scope"] == "overall"]
+    print("onset tolerance ({:.0f} ms) - detections changed vs strict t0 (overall):".format(E.ONSET_TOLERANCE_NS / 1e6))
+    print(te[["detector", "detected_strict", "detected_with_tolerance", "detections_changed",
+              "fa_early_strict", "fa_early_with_tolerance"]].to_string(index=False))
     print("")
     print("runtime: " + ", ".join("{}={}".format(k, v) for k, v in timing.items()))
     print("outputs: {}".format(out))
@@ -252,9 +281,11 @@ def evaluate_saved(split="validation", final=False, data=None, features_dir=None
     models = {n: joblib.load(out / "models" / "{}.joblib".format(n)) for n in ("M1", "M2", "M3")}
     feats = {W: F.load_features(features_dir, W) for W in F.WINDOWS}
     labels, n_amb = F.load_labels(data)
+    feats = apply_label_splits(feats, labels)
     lab = labels[labels["split"] == split].reset_index(drop=True)
     base = B.compute_baselines(data, lab)
-    table = detector_table(split, labels, feats, base, settings, models)
+    table, tol_effect = detector_table(split, labels, feats, base, settings, models)
+    tol_effect.to_csv(Path(out) / "{}_tolerance_effect.csv".format(split), index=False)
     header = ["Split: {}; ambiguous excluded: {}. Settings from chosen.json (picked on validation).".format(
         split, n_amb)]
     if split == "train":

@@ -3,10 +3,14 @@
 Alert policy (models and B1/B2/B4 alike): a run raises its FIRST alert at the
 first tick where the score has been >= threshold for K=3 consecutive ticks.
 Only the first alert counts (the detector is advisory; it warns once):
-  * healthy run:  any alert                  -> false alarm
-  * hang run:     first alert before t0      -> false alarm ("early"), not detected
-                  first alert at/after t0    -> detected, delay = alert - t0
-                  no alert                   -> missed
+  * healthy run:  any alert                          -> false alarm
+  * hang run:     first alert before t0 - TOL         -> false alarm ("early"), not detected
+                  first alert at/after t0 - TOL       -> detected, delay = alert - t0
+                  no alert                            -> missed
+TOL = one sampler tick (5 ms), for every detector: t0 (the last Tier F
+progress event) can trail the actual onset by a few microseconds when a
+bystander thread logs one last progress event, so an alert up to one tick
+before t0 is on time. Delays can therefore be slightly negative (>= -5 ms).
 B3 has no score; its alert time comes straight from the Tier F replay.
 
 Run-level metrics: detection rate = detected / hang runs; delay median and
@@ -29,6 +33,7 @@ import pandas as pd
 
 K_CONSECUTIVE = 3
 MAX_FA_RATE = 0.05
+ONSET_TOLERANCE_NS = 5_000_000  # one 5 ms sampler tick
 
 
 class TestSplitRefused(SystemExit):
@@ -86,7 +91,7 @@ def _missing(v):
     return v is None or (isinstance(v, float) and np.isnan(v))
 
 
-def outcome(hang, t0, alert):
+def outcome(hang, t0, alert, tol_ns=ONSET_TOLERANCE_NS):
     """('fa_healthy' | 'ok_healthy' | 'fa_early' | 'detected' | 'missed', delay_ms).
     alert/t0 may be None or NaN (as they come back from a DataFrame) for 'none'."""
     alert = None if _missing(alert) else int(alert)
@@ -97,19 +102,19 @@ def outcome(hang, t0, alert):
         return ("fa_healthy", None) if alert is not None else ("ok_healthy", None)
     if alert is None:
         return "missed", None
-    if alert < t0:
+    if alert < t0 - tol_ns:
         return "fa_early", None
     return "detected", (alert - t0) / 1e6
 
 
-def metrics_from_alerts(rows):
+def metrics_from_alerts(rows, tol_ns=ONSET_TOLERANCE_NS):
     """rows: iterable of (hang, t0, alert_ns or None). Returns a metrics dict."""
     n = n_hang = det = fa_h = fa_e = 0
     delays = []
     for hang, t0, alert in rows:
         n += 1
         n_hang += int(bool(hang))
-        kind, delay = outcome(hang, t0, alert)
+        kind, delay = outcome(hang, t0, alert, tol_ns)
         if kind == "detected":
             det += 1
             delays.append(delay)
@@ -128,14 +133,14 @@ def metrics_from_alerts(rows):
     }
 
 
-def sweep(runs, thresholds):
+def sweep(runs, thresholds, tol_ns=ONSET_TOLERANCE_NS):
     """Metrics for every threshold over a list of RunScores (vectorised per run)."""
     thresholds = np.asarray(thresholds, dtype=float)
     alerts = np.stack([r.alert_ns(thresholds) for r in runs]) if runs else np.zeros((0, len(thresholds)))
     out = []
     for j, th in enumerate(thresholds):
         rows = [(r.hang, r.t0, None if alerts[i, j] < 0 else int(alerts[i, j])) for i, r in enumerate(runs)]
-        m = metrics_from_alerts(rows)
+        m = metrics_from_alerts(rows, tol_ns)
         m["threshold"] = float(th)
         out.append(m)
     return pd.DataFrame(out)
@@ -167,14 +172,15 @@ def candidate_thresholds(scores, n=200):
 
 # ------------------------------------------------------------ reporting
 
-def per_family_metrics(alert_rows):
+def per_family_metrics(alert_rows, tol_ns=ONSET_TOLERANCE_NS):
     """alert_rows: list of dicts with family, hang, t0, alert. Overall + per family."""
     def triples(rows):
         return [(r["hang"], r["t0"], r["alert"]) for r in rows]  # plain Python: no NaN coercion
 
-    res = [dict(scope="overall", **metrics_from_alerts(triples(alert_rows)))]
+    res = [dict(scope="overall", **metrics_from_alerts(triples(alert_rows), tol_ns))]
     for fam in sorted({r["family"] for r in alert_rows}):
-        res.append(dict(scope=fam, **metrics_from_alerts(triples([r for r in alert_rows if r["family"] == fam]))))
+        res.append(dict(scope=fam, **metrics_from_alerts(triples([r for r in alert_rows if r["family"] == fam]),
+                                                         tol_ns)))
     return res
 
 

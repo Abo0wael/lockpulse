@@ -29,18 +29,32 @@ class AlertPolicyTest(unittest.TestCase):
 
 class OutcomeTest(unittest.TestCase):
     def test_outcomes(self):
+        t0 = 100_000_000
         self.assertEqual(E.outcome(0, None, None), ("ok_healthy", None))
         self.assertEqual(E.outcome(0, None, 5), ("fa_healthy", None))
-        self.assertEqual(E.outcome(1, 100, None), ("missed", None))
-        self.assertEqual(E.outcome(1, 100, 99), ("fa_early", None))
-        self.assertEqual(E.outcome(1, 100_000_000, 150_000_000), ("detected", 50.0))
+        self.assertEqual(E.outcome(1, t0, None), ("missed", None))
+        self.assertEqual(E.outcome(1, t0, t0 - 6_000_000), ("fa_early", None))
+        self.assertEqual(E.outcome(1, t0, 150_000_000), ("detected", 50.0))
+
+    def test_one_tick_tolerance_before_t0(self):
+        t0 = 100_000_000
+        tol = E.ONSET_TOLERANCE_NS
+        self.assertEqual(tol, 5_000_000)
+        self.assertEqual(E.outcome(1, t0, t0 - tol), ("detected", -5.0))       # exactly one tick early
+        self.assertEqual(E.outcome(1, t0, t0 - 3_000), ("detected", -0.003))   # microseconds early
+        self.assertEqual(E.outcome(1, t0, t0 - tol - 1)[0], "fa_early")
+        self.assertEqual(E.outcome(1, t0, t0 - 3_000, tol_ns=0)[0], "fa_early")  # strict mode
+        m0 = E.metrics_from_alerts([(1, t0, t0 - 3_000)], tol_ns=0)
+        m1 = E.metrics_from_alerts([(1, t0, t0 - 3_000)])
+        self.assertEqual((m0["detected"], m0["fa_early"]), (0, 1))
+        self.assertEqual((m1["detected"], m1["fa_early"]), (1, 0))
 
     def test_nan_from_dataframes_means_no_alert(self):
         self.assertEqual(E.outcome(0, float("nan"), float("nan"))[0], "ok_healthy")
         self.assertEqual(E.outcome(1, 100.0, float("nan"))[0], "missed")
 
     def test_metrics(self):
-        m = E.metrics_from_alerts([(1, 0, 10_000_000), (1, 0, 30_000_000), (1, 50, 10), (0, None, None),
+        m = E.metrics_from_alerts([(1, 0, 10_000_000), (1, 0, 30_000_000), (1, 50_000_000, 10), (0, None, None),
                                    (0, None, 7)])
         self.assertEqual((m["runs"], m["hang_runs"], m["detected"], m["fa_early"], m["fa_healthy"]), (5, 3, 2, 1, 1))
         self.assertAlmostEqual(m["detection_rate"], 2 / 3)
