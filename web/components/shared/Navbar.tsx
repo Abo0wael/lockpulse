@@ -2,7 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
-import { Menu, X } from "lucide-react";
+import { ArrowRight, Menu, X } from "lucide-react";
 import { useState } from "react";
 
 const links = [
@@ -57,6 +57,13 @@ export default function Navbar() {
             </Link>
           ))}
         </div>
+
+        <Link
+          href="/replay"
+          className="hidden items-center gap-2 rounded-lg border border-primary/35 bg-primary/10 px-3.5 py-2 text-sm font-semibold text-text transition hover:border-primary/60 hover:bg-primary/15 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary lg:inline-flex"
+        >
+          Explore replay <ArrowRight aria-hidden="true" size={15} className="text-secondary" />
+        </Link>
 
         <button
           type="button"
