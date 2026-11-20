@@ -1,5 +1,4 @@
-# Explainer video (python video/narration.py && python video/make_video.py), on top of requirements-ml.txt.
+# Silent explainer video (python video/make_video.py), on top of requirements-ml.txt.
 # imageio-ffmpeg ships an ffmpeg binary, so no system ffmpeg is needed (a system ffmpeg on PATH is preferred).
-edge-tts==7.3.1
 imageio-ffmpeg==0.8.1
 pillow==13.0.0

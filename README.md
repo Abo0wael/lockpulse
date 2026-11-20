@@ -149,31 +149,6 @@ Phases 3 and 4 are pure Python and run on Windows, macOS or Linux. The commands 
 
 `make all` stays the C build that CI uses; the ML pipeline is `make reproduce` (phase 3 then phase 4), plus `make phase4` and `make demo RUN=<run_id>`.
 
-## LockPulse Explorer (GUI)
-
-A read-only Streamlit app over the real data. It reads `data/collect1`, the frozen phase-3 detectors (hashes verified) and `results/`. It never trains or tunes anything.
-
-```sh
-.venv/Scripts/python -m pip install -r gui/requirements-gui.txt   # once (streamlit, plotly)
-.venv/Scripts/python -m gui                                       # starts the app and opens the browser
-```
-
-The first page load takes about 15 s while it imports scikit-learn and verifies the frozen models. After that, switching runs is instant: each run loads in about 0.1–0.2 s and is cached.
-
-| Page | What it shows |
-|---|---|
-| 1 · The idea | Problem, existing approaches, our approach, and the two-tier diagram. |
-| 2 · Replay a run | Thread timeline coloured by activity: running, futex, sleep/IO, other. Under it, M3 score and B2 silence with the frozen thresholds, and the first alert of all 7 detectors. A time slider and Play (1x/2x/4x); the thread table and a status card per detector at the cursor. The Tier F panel shows the last 12 events and the wait-for graph (cycle in red). |
-| 3 · Compare detectors | Delay (median and p90, log scale), detected and false alarms per family, and PR-AUC, for test (one-shot frozen evaluation) or validation. Hover shows exact numbers. |
-| 4 · Why the syscall matters | A `sleeping_workers` run next to a `sem_never_posted` hang. "Hide syscall" makes them look identical. Also the ablation table (0/91 without syscall features). |
-| 5 · Overhead | Slowdown per mode with IQR bars for `high_contention` and `prodcons_correct`. |
-
-Use the sidebar to pick a run (split → family → run); it shows the run's label and t0.
-
-**Screenshots and deep links.** Every view has a URL, e.g. `http://localhost:8501/?page=replay&run=dining_philosophers-c1-s01&t=780`. `page` is one of `idea`, `replay`, `compare`, `syscall`, `overhead`; `t` is the replay cursor in ms. Open the URL and take a screenshot with the browser or the OS (Win+Shift+S).
-
-For automated screenshots, `pip install playwright`, start the app headless with `python -m gui --server.headless true`, and use `page.screenshot()` from Playwright with `channel="msedge"`, which uses the installed Edge.
-
 ## Phase 4: evaluation and demo
 
 - **Freeze:** `results/phase4/FROZEN.md` / `frozen.json` hold the SHA-256 of the phase-3 settings and models (committed). `ml.freeze` verifies them, phase 4 loads nothing else, and `ml.phase3` refuses to overwrite `results/phase3/`.

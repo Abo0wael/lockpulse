@@ -1,23 +1,17 @@
-"""LockPulse explainer video: scenes drawn with Pillow, encoded with ffmpeg.
+"""LockPulse explainer video (silent, English on-screen text): scenes drawn with Pillow, encoded with ffmpeg.
 
-  python video/narration.py [--lang en|ar]          # 1. narration MP3s + durations (video/out/audio_<lang>/)
-  python video/make_video.py stills [--lang en|ar]  # 2. last frame of every scene -> video/out/stills_<lang>/
-  python video/make_video.py [--lang en|ar]         # 3. render + narration -> video/out/LockPulse_explainer_<lang>.mp4
-English (en) is the default.
+  python video/make_video.py stills   # last frame of every scene -> video/out/stills/ (+ contact sheet)
+  python video/make_video.py          # render -> video/out/LockPulse_explainer.mp4
 
-Each scene lasts max(its base duration, narration + 1.0 s); its reveal timeline is
-stretched proportionally. All outputs go to video/out/ (gitignored).
+All outputs go to video/out/ (gitignored). Uses a system ffmpeg if on PATH, else the one
+bundled with imageio-ffmpeg.
 """
-import json, math, os, re, shutil, subprocess, sys
+import math, os, shutil, subprocess, sys
 from PIL import Image, ImageDraw, ImageFont
 
 W, H, FPS = 1920, 1080, 30
 HERE = os.path.dirname(os.path.abspath(__file__))
 OUT = os.path.join(HERE, "out")
-NARRATION_LEAD = 0.3      # s of silence before the voice starts in each scene
-NARRATION_TAIL = 1.0      # scene length >= narration + this
-MAX_MB = 24.0             # WhatsApp-friendly size target for the final MP4
-LANG = "en"               # narration language, set from --lang
 
 # Fonts: Inter + DejaVu Sans Mono where available (Linux), else Segoe UI + Consolas (Windows).
 FD = "/usr/share/fonts/opentype/inter/"
@@ -432,143 +426,58 @@ def s_end():
 
 SCENES = [s_title, s_problem, s_existing, s_system, s_bench, s_detectors, s_results, s_finding, s_takeaways, s_end]
 
-def frame_at(els, t, dur, stretch=1.0):
-    """Frame at real time t of a scene lasting dur s; reveal times run `stretch` times slower."""
+def frame_at(els, t, dur):
     fr = Image.new("RGBA", (W, H), (*BG, 255))
     for e in els:
-        e.draw(fr, t / stretch)
-    # fade from / to black inside the scene (real time, not stretched)
+        e.draw(fr, t)
+    # fade from / to black inside the scene
     k = min(1.0, t / 0.35, (dur - t) / 0.35)
     if k < 1:
         fr = Image.blend(Image.new("RGBA", (W, H), (0, 0, 0, 255)), fr, max(0.0, k))
     return fr.convert("RGB")
 
 
-def narration_durations():
-    path = os.path.join(OUT, "audio_" + LANG, "durations.json")
-    if not os.path.exists(path):
-        return None
-    with open(path, encoding="utf-8") as fh:
-        return json.load(fh)
-
-
-def timeline():
-    """[(scene fn, base_dur, scene_dur, stretch, n_frames, narration_s)] for all scenes."""
-    narr = narration_durations()
-    out = []
-    for i, sc in enumerate(SCENES):
-        base, _els = sc()
-        na = narr.get(f"s{i + 1:02d}") if narr else None
-        dur = max(base, na + NARRATION_TAIL) if na else base   # voice starts NARRATION_LEAD s in
-        n = int(round(dur * FPS))
-        out.append((sc, base, n / FPS, (n / FPS) / base, n, na))
-    return out
-
-
 def stills():
-    """Last frame of every scene (just before the fade to black) + a contact sheet."""
-    sdir = f"{OUT}/stills_{LANG}"
-    os.makedirs(sdir, exist_ok=True)
+    """Last fully visible frame of every scene (before the fade to black) + a contact sheet."""
+    os.makedirs(f"{OUT}/stills", exist_ok=True)
     paths = []
-    for i, (sc, base, dur, stretch, n, na) in enumerate(timeline()):
-        _b, els = sc()
-        t = dur - 0.40   # the last fully visible frame; the final 0.35 s fade to black
-        p = f"{sdir}/s{i + 1:02d}.png"
-        frame_at(els, t, dur, stretch).save(p)
+    for i, sc in enumerate(SCENES):
+        dur, els = sc()
+        p = f"{OUT}/stills/s{i + 1:02d}.png"
+        frame_at(els, dur - 0.5, dur).save(p)
         paths.append(p)
-        print(f"scene {i + 1:2d}: {dur:6.2f} s (base {base:4.1f} s, narration {na or 0:5.2f} s, x{stretch:.2f})")
     sheet = Image.new("RGB", (2 * 960, 5 * 540), BG)
     for i, p in enumerate(paths):
         sheet.paste(Image.open(p).resize((960, 540)), ((i % 2) * 960, (i // 2) * 540))
-    sheet.save(f"{sdir}/contact_sheet.png")
+    sheet.save(f"{OUT}/stills/contact_sheet.png")
 
 
-def run_ffmpeg(args):
-    subprocess.run([ffmpeg_exe(), "-y", "-hide_banner", "-loglevel", "error"] + args, check=True)
-
-
-def render_video(tl):
+def render():
     os.makedirs(f"{OUT}/parts", exist_ok=True)
     names = []
-    for i, (sc, base, dur, stretch, n, na) in enumerate(tl):
-        _b, els = sc()
+    for i, sc in enumerate(SCENES):
+        dur, els = sc()
+        n = int(round(dur * FPS))
         final = f"{OUT}/parts/p{i:02d}.mp4"; tmp = f"{OUT}/parts/p{i:02d}.tmp.mp4"
-        # Mostly static slides: tune for still images keeps the file small.
         cmd = [ffmpeg_exe(), "-y", "-loglevel", "error", "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}",
-               "-r", str(FPS), "-i", "-", "-c:v", "libx264", "-crf", "23", "-preset", "medium", "-tune", "stillimage",
-               "-g", str(FPS * 4), "-pix_fmt", "yuv420p", "-r", str(FPS), tmp]
+               "-r", str(FPS), "-i", "-", "-c:v", "libx264", "-crf", "18", "-preset", "veryfast",
+               "-pix_fmt", "yuv420p", "-r", str(FPS), tmp]
         p = subprocess.Popen(cmd, stdin=subprocess.PIPE)
         for f in range(n):
-            p.stdin.write(frame_at(els, f / FPS, dur, stretch).tobytes())
+            p.stdin.write(frame_at(els, f / FPS, dur).tobytes())
         p.stdin.close()
         if p.wait() != 0:
             sys.exit(f"ffmpeg failed on scene {i}")
         os.replace(tmp, final)
         names.append(final)
-        print(f"scene {i + 1} rendered ({dur:.2f} s)", flush=True)
+        print("scene", i, "done", flush=True)
     with open(f"{OUT}/parts/list.txt", "w", encoding="utf-8") as fh:
         for nm in names:
-            fh.write("file '{}'\n".format(nm.replace("\\", "/").replace("'", "'\\''")))
-    silent = f"{OUT}/LockPulse_explainer_silent_{LANG}.mp4"
-    run_ffmpeg(["-f", "concat", "-safe", "0", "-i", f"{OUT}/parts/list.txt", "-c", "copy", silent])
-    return silent
-
-
-def build_audio(tl):
-    """Each scene's MP3, delayed by NARRATION_LEAD and padded with silence to the scene length; concatenated."""
-    adir = f"{OUT}/audio_{LANG}"
-    wavs = []
-    for i, (sc, base, dur, stretch, n, na) in enumerate(tl):
-        src = f"{adir}/s{i + 1:02d}.mp3"
-        dst = f"{adir}/padded_s{i + 1:02d}.wav"
-        ms = int(NARRATION_LEAD * 1000)
-        run_ffmpeg(["-i", src, "-af", f"adelay={ms}|{ms},apad", "-t", f"{n / FPS:.6f}", "-ar", "48000", "-ac", "1", dst])
-        wavs.append(dst)
-    with open(f"{adir}/list.txt", "w", encoding="utf-8") as fh:
-        for w in wavs:
-            fh.write("file '{}'\n".format(w.replace("\\", "/")))
-    full = f"{adir}/narration_full.wav"
-    run_ffmpeg(["-f", "concat", "-safe", "0", "-i", f"{adir}/list.txt", "-c", "copy", full])
-    return full
-
-
-def probe_duration(path):
-    p = subprocess.run([ffmpeg_exe(), "-hide_banner", "-i", path], capture_output=True, text=True,
-                       encoding="utf-8", errors="replace")
-    m = re.search(r"Duration: (\d+):(\d+):([\d.]+)", p.stderr)
-    return int(m.group(1)) * 3600 + int(m.group(2)) * 60 + float(m.group(3)) if m else None
-
-
-def render():
-    tl = timeline()
-    if tl[0][5] is None:
-        sys.exit(f"narration missing: run python video/narration.py --lang {LANG} first")
-    total = sum(x[2] for x in tl)
-    print(f"total length {total:.1f} s ({total / 60:.1f} min)")
-    silent = render_video(tl)
-    audio = build_audio(tl)
-    final = f"{OUT}/LockPulse_explainer_{LANG}.mp4"
-    run_ffmpeg(["-i", silent, "-i", audio, "-map", "0:v:0", "-map", "1:a:0", "-c:v", "copy", "-c:a", "aac",
-                "-b:a", "96k", "-ac", "1", "-shortest", "-movflags", "+faststart", final])
-    mb = os.path.getsize(final) / 1e6
-    if mb > MAX_MB:
-        # Re-encode the video stream to a bitrate that fits, keeping the audio as is.
-        kbps = int((MAX_MB * 8000 / total) - 110)
-        print(f"{mb:.1f} MB > {MAX_MB} MB: re-encoding video at {kbps} kb/s")
-        smaller = f"{OUT}/LockPulse_explainer_{LANG}.small.mp4"
-        run_ffmpeg(["-i", final, "-c:v", "libx264", "-b:v", f"{kbps}k", "-maxrate", f"{int(kbps * 1.5)}k",
-                    "-bufsize", f"{kbps * 2}k", "-preset", "slow", "-tune", "stillimage", "-pix_fmt", "yuv420p",
-                    "-c:a", "copy", "-movflags", "+faststart", smaller])
-        os.replace(smaller, final)
-        mb = os.path.getsize(final) / 1e6
-    print(f"final: {final}  {probe_duration(final):.2f} s  {mb:.1f} MB")
+            fh.write("file '{}'\n".format(nm.replace("\\", "/").replace("'", "'\''")))
+    subprocess.run([ffmpeg_exe(), "-y", "-loglevel", "error", "-f", "concat", "-safe", "0", "-i",
+                    f"{OUT}/parts/list.txt", "-c", "copy", "-movflags", "+faststart",
+                    f"{OUT}/LockPulse_explainer.mp4"], check=True)
 
 
 if __name__ == "__main__":
-    import argparse
-    ap = argparse.ArgumentParser(description="Render the LockPulse explainer video.")
-    ap.add_argument("what", nargs="?", choices=["render", "stills"], default="render")
-    ap.add_argument("--lang", choices=["en", "ar"], default="en")
-    a = ap.parse_args()
-    LANG = a.lang
-    stills() if a.what == "stills" else render()
+    stills() if sys.argv[1:] == ["stills"] else render()
