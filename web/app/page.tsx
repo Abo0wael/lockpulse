@@ -1,5 +1,7 @@
 
 import Link from "next/link";
+import Navbar from "@/components/shared/Navbar";
+import Footer from "@/components/shared/Footer";
 
 const metrics = [
   { value: "91 / 91", label: "Hangs detected", color: "text-success" },
@@ -37,34 +39,9 @@ const pages = [
 
 export default function Home() {
   return (
-    <main className="min-h-screen bg-background text-text">
-
-      {/* Navbar */}
-      <nav className="sticky top-0 z-50 border-b border-border bg-background/90 backdrop-blur">
-        <div className="mx-auto flex max-w-7xl items-center justify-between px-6 py-5">
-          <Link href="/" className="text-xl font-bold tracking-tight">
-            Lock<span className="text-primary">Pulse</span>
-            <span className="ml-2 text-xs font-normal text-muted">
-              SYSTEM MONITOR
-            </span>
-          </Link>
-
-          <div className="hidden items-center gap-7 text-sm text-muted md:flex">
-            <Link href="/replay" className="transition hover:text-primary">Replay</Link>
-            <Link href="/results" className="transition hover:text-primary">Results</Link>
-            <Link href="/why-syscall" className="transition hover:text-primary">Why Syscalls?</Link>
-            <Link href="/method" className="transition hover:text-primary">Method</Link>
-          </div>
-
-          <Link
-            href="/replay"
-            className="rounded-lg bg-primary px-4 py-2 text-sm font-semibold text-white transition hover:bg-indigo-500"
-          >
-            Explore Replay →
-          </Link>
-        </div>
-      </nav>
-
+    <>
+      <Navbar />
+      <main className="flex-1 bg-background text-text">
       {/* Hero */}
       <section className="mx-auto grid max-w-7xl gap-14 px-6 py-24 md:grid-cols-2 md:items-center md:py-32">
         <div>
@@ -176,7 +153,7 @@ export default function Home() {
               Performance at a glance
             </h2>
             <p className="mt-2 text-sm text-muted">
-              Results on the project's frozen, unseen test set.
+              Results on the project&apos;s frozen, unseen test set.
             </p>
           </div>
 
@@ -236,17 +213,8 @@ export default function Home() {
         </div>
       </section>
 
-      {/* Footer */}
-      <footer className="border-t border-border">
-        <div className="mx-auto flex max-w-7xl flex-col justify-between gap-3 px-6 py-8 text-sm text-muted sm:flex-row">
-          <p>
-            <span className="font-semibold text-text">LockPulse</span>
-            {" "}— System Hang Detection & Analysis
-          </p>
-          <p>System Programming Project · 2026</p>
-        </div>
-      </footer>
-
-    </main>
+      </main>
+      <Footer />
+    </>
   );
 }
