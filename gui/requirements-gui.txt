@@ -1,0 +1,8 @@
+# LockPulse Explorer GUI (python -m gui), on top of requirements-ml.txt.
+streamlit==1.67.0
+plotly==7.1.0
+# transitive, pinned to the versions the GUI was tested with
+altair==6.3.0
+narwhals==2.29.0
+protobuf==7.36.2
+pyarrow==26.0.1
