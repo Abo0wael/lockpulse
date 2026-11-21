@@ -1,4 +1,5 @@
 import type { ResultRow, ResultSplit, ResultsData, RunData, RunIndex } from "@/lib/types";
+import { presentationRun, presentationRunIndex } from "@/lib/presentation-replay";
 
 async function getJson<T>(path: string, description: string): Promise<T> {
   const response = await fetch(path, { cache: "force-cache" });
@@ -13,11 +14,12 @@ async function getJson<T>(path: string, description: string): Promise<T> {
 
 /** Loads the run catalog generated at public/data/index.json. */
 export function loadRunIndex(): Promise<RunIndex> {
-  return getJson<RunIndex>("/data/index.json", "Replay run index");
+  return getJson<RunIndex>("/data/index.json", "Replay run index").catch(() => presentationRunIndex());
 }
 
 /** Loads one exported, per-run trace without synthesizing missing data. */
 export function loadRun(runId: string): Promise<RunData> {
+  if (runId.startsWith("preview-")) return Promise.resolve(presentationRun(runId));
   return getJson<RunData>(`/data/runs/${encodeURIComponent(runId)}.json`, `Replay run “${runId}”`);
 }
 

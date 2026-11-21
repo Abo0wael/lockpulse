@@ -1,8 +1,9 @@
-import Link from "next/link";
-import { Activity, ArrowRight, Clock3, Layers3, ShieldCheck } from "lucide-react";
+import { Activity, ArrowRight, Clock3, Layers3, Radio, ShieldCheck, Timer } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Navbar from "@/components/shared/Navbar";
 import Footer from "@/components/shared/Footer";
+import ActionLink from "@/components/shared/ActionLink";
+import StatusBadge from "@/components/shared/StatusBadge";
 import DeadlockAnimation from "@/components/landing/DeadlockAnimation";
 import Reveal from "@/components/landing/Reveal";
 import ThreadComparison from "@/components/landing/ThreadComparison";
@@ -14,10 +15,46 @@ const metrics: {
   icon: LucideIcon;
   tone: string;
 }[] = [
-  { value: "91/91", label: "Hang detections", detail: "B2 · M2 · M3 · held-out hangs", icon: Activity, tone: "text-success" },
-  { value: "0", label: "False alarms", detail: "B2 · M2 · M3 · across 89 healthy runs", icon: ShieldCheck, tone: "text-success" },
+  { value: "91/91", label: "Hang detections", detail: "Each: B2 · M2 · M3 on held-out hangs", icon: Activity, tone: "text-success" },
+  { value: "0", label: "False alarms", detail: "Each: B2 · M2 · M3 across 89 healthy runs", icon: ShieldCheck, tone: "text-success" },
   { value: "47–69 ms", label: "Median detection delay", detail: "M2 47 ms · M3 55 ms · B2 69 ms", icon: Clock3, tone: "text-secondary" },
   { value: "13", label: "Benchmark families", detail: "7 hang scenarios · 6 hard negatives", icon: Layers3, tone: "text-primary" },
+];
+
+const readouts = [
+  { label: "INPUT SOURCE", value: "/proc sampling", detail: "External thread telemetry", icon: Radio, color: "text-secondary" },
+  { label: "SAMPLE CADENCE", value: "5 ms", detail: "Partial telemetry · Tier P", icon: Timer, color: "text-primary" },
+  { label: "EVIDENCE VIEW", value: "Trace replay", detail: "States, alerts, events", icon: Activity, color: "text-success" },
+];
+
+const pipeline: {
+  label: string;
+  title: string;
+  description: string;
+  icon: LucideIcon;
+  color: string;
+}[] = [
+  {
+    label: "OBSERVE",
+    title: "Read thread context",
+    description: "Pair thread state with CPU activity, context switches, and the current syscall.",
+    icon: Radio,
+    color: "text-secondary",
+  },
+  {
+    label: "DETECT",
+    title: "Separate quiet from stuck",
+    description: "Apply baseline rules and learned detectors to identify patterns that stop making progress.",
+    icon: Activity,
+    color: "text-primary",
+  },
+  {
+    label: "INSPECT",
+    title: "Review the evidence",
+    description: "Replay thread states, detector alerts, and synchronization events from a recorded run.",
+    icon: ShieldCheck,
+    color: "text-success",
+  },
 ];
 
 export default function Home() {
@@ -31,7 +68,10 @@ export default function Home() {
 
           <div className="lp-container grid items-center gap-9 pb-12 pt-10 sm:gap-12 sm:pb-16 sm:pt-14 lg:grid-cols-[0.78fr_1.22fr] lg:gap-8 lg:py-16 xl:gap-12 xl:py-20">
             <Reveal className="relative z-10 max-w-2xl lg:pl-2">
-              <p className="lp-kicker"><span className="lp-kicker-line" />Linux thread observability <span className="text-muted/70">/ SYSTEMS INTELLIGENCE</span></p>
+              <div className="flex flex-wrap items-center gap-3">
+                <p className="lp-kicker"><span className="lp-kicker-line" />Linux thread observability</p>
+                <StatusBadge tone="preview">Research preview</StatusBadge>
+              </div>
               <h1 id="hero-title" className="mt-6 max-w-[12ch] text-[3.15rem] font-semibold leading-[0.94] tracking-[-0.065em] sm:mt-8 sm:text-6xl lg:text-[4.4rem] xl:text-[5.45rem]">
                 Detect the silence.<br /><span className="text-secondary">Understand the</span> <span className="text-primary">deadlock.</span>
               </h1>
@@ -39,25 +79,33 @@ export default function Home() {
                 LockPulse analyzes thread-state telemetry and syscall context to distinguish real hangs from legitimate sleeping and waiting.
               </p>
               <div className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-4 sm:mt-8">
-                <Link href="/replay" className="lp-button-primary group min-h-12 px-5 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-secondary">
+                <ActionLink href="/replay" className="group min-h-12 px-5">
                   Explore a recorded run <ArrowRight aria-hidden="true" size={17} className="transition-transform group-hover:translate-x-1" />
-                </Link>
+                </ActionLink>
                 <a href="#evidence" className="group inline-flex min-h-11 items-center gap-2 rounded-md px-2 text-sm font-medium text-muted transition-colors hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary">
                   View held-out evidence <span aria-hidden="true" className="text-secondary transition-transform group-hover:translate-y-0.5">↓</span>
                 </a>
               </div>
-              <div className="mt-8 flex flex-wrap gap-x-5 gap-y-2 border-t border-border/80 pt-4 font-mono text-[10px] uppercase tracking-[0.12em] text-muted sm:mt-9 sm:gap-x-6">
-                <span className="inline-flex items-center gap-2"><span aria-hidden="true" className="size-1.5 rounded-full bg-secondary" />5 ms external sampling</span>
-                <span>Linux · pthreads</span>
-                <span>Held-out benchmark</span>
+              <div className="mt-8 grid gap-2 border-t border-border/80 pt-4 sm:mt-9 sm:grid-cols-3">
+                {readouts.map(({ label, value, detail, icon: Icon, color }) => (
+                  <div key={label} className="min-w-0 rounded-lg border border-border/80 bg-background/45 px-3 py-2.5">
+                    <div className="flex items-center gap-2"><Icon aria-hidden="true" size={13} className={color} /><span className="font-mono text-[9px] font-semibold tracking-[0.14em] text-muted">{label}</span></div>
+                    <p className="mt-2 truncate text-xs font-semibold text-text">{value}</p>
+                    <p className="mt-0.5 truncate text-[10px] text-muted">{detail}</p>
+                  </div>
+                ))}
               </div>
             </Reveal>
 
             <Reveal delay={0.08} className="relative min-w-0 lg:-mr-4 xl:-mr-8">
               <div aria-hidden="true" className="absolute -inset-8 -z-10 bg-[radial-gradient(ellipse_at_50%_48%,rgba(87,82,198,0.17),transparent_66%)]" />
+              <div className="mb-2 flex items-center justify-between gap-3 px-1 font-mono text-[9px] font-semibold tracking-[0.14em] text-muted sm:text-[10px]">
+                <span>LOCKPULSE / TRACE CONSOLE</span>
+                <span className="text-warning">ILLUSTRATIVE SIMULATION</span>
+              </div>
               <DeadlockAnimation />
               <p className="mt-3 px-1 text-right font-mono text-[9px] uppercase tracking-[0.12em] text-muted/75 sm:text-[10px]">
-                Two-thread mutex cycle · illustrative sequence · not host monitoring
+                Two-thread mutex cycle · not host monitoring
               </p>
             </Reveal>
           </div>
@@ -94,6 +142,36 @@ export default function Home() {
           </div>
         </section>
 
+        <section id="overview" aria-labelledby="overview-title" className="border-b border-border">
+          <div className="lp-container py-14 sm:py-18 lg:py-20">
+            <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+              <div className="max-w-2xl">
+                <p className="lp-kicker"><span className="lp-kicker-line" />Signal pipeline</p>
+                <h2 id="overview-title" className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">From sampled state to reviewable evidence.</h2>
+              </div>
+              <p className="max-w-lg text-sm leading-6 text-muted">Follow the system from observation, through detector analysis, to an inspectable recorded run.</p>
+            </div>
+            <div className="mt-8 grid gap-3 md:grid-cols-3">
+              {pipeline.map((step, index) => {
+                const Icon = step.icon;
+                return (
+                  <Reveal key={step.label} delay={index * 0.06}>
+                    <article className="group relative h-full min-h-[190px] overflow-hidden rounded-xl border border-border bg-surface/75 p-5 transition duration-300 hover:-translate-y-1 hover:border-primary/35 hover:bg-surface sm:p-6">
+                      <span aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/45 to-transparent" />
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-[10px] font-semibold tracking-[0.18em] text-muted">STAGE 0{index + 1} <span className="mx-1 text-border">/</span> {step.label}</span>
+                        <span className={`rounded-lg border border-border bg-background p-2.5 transition-transform duration-300 group-hover:rotate-3 group-hover:scale-105 ${step.color}`}><Icon aria-hidden="true" size={18} /></span>
+                      </div>
+                      <h3 className="mt-6 text-lg font-semibold tracking-tight">{step.title}</h3>
+                      <p className="mt-2 text-sm leading-6 text-muted">{step.description}</p>
+                    </article>
+                  </Reveal>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
         <section aria-labelledby="quiet-title" className="relative border-b border-border">
           <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_16%_42%,rgba(66,220,232,0.055),transparent_42%)]" />
           <div className="lp-container relative py-14 sm:py-18 lg:py-24">
@@ -106,9 +184,7 @@ export default function Home() {
                 <p className="max-w-2xl text-sm leading-7 text-muted sm:text-base">A sleeping worker can pause and resume normally. A hung worker may remain blocked. CPU-only monitoring can see little activity in both; syscall context shows what the thread is waiting on.</p>
               </Reveal>
             </div>
-            <Reveal delay={0.08}>
-              <ThreadComparison />
-            </Reveal>
+            <Reveal delay={0.08}><ThreadComparison /></Reveal>
           </div>
         </section>
 
@@ -121,6 +197,15 @@ export default function Home() {
             </div>
             <p className="max-w-md border-l border-primary/45 pl-4 text-sm leading-7 text-muted sm:text-base">LockPulse combines sampled thread state and syscall context with a separate synchronization trace to examine wait relationships.</p>
           </Reveal>
+        </section>
+
+        <section className="border-t border-border bg-surface/35">
+          <div className="lp-container flex flex-col gap-4 py-6 sm:py-7 md:flex-row md:items-center md:justify-between">
+            <p className="max-w-3xl text-xs leading-5 text-muted sm:text-sm">LockPulse is evaluated on a synthetic benchmark. These results describe the tested workloads and do not guarantee performance on other programs.</p>
+            <a href="#evidence" className="inline-flex min-h-10 shrink-0 items-center gap-2 self-start rounded-md px-2 text-sm font-semibold text-secondary transition hover:text-sky-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary md:self-auto">
+              Review benchmark evidence <ArrowRight aria-hidden="true" size={16} />
+            </a>
+          </div>
         </section>
       </main>
       <Footer />

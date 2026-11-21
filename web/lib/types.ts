@@ -2,6 +2,9 @@
 
 export type RunTruth = "deadlock" | "hang" | "healthy";
 export type ResultSplit = "test" | "validation";
+export type TraceEvent = [timeMs: number, threadId: number, eventIndex: number, objectIndex: number];
+export type Split = "train" | "validation" | "test";
+export type ThreadState = "R" | "F" | "I" | "B" | ".";
 
 export interface RunIndexEntry {
   runId: string;
@@ -13,14 +16,17 @@ export interface RunIndexEntry {
   durationMs: number;
   config: string;
   seed: number;
-  bytes: number;
+  bytes?: number;
 }
+
+export type RunSummary = RunIndexEntry;
 
 export interface RunIndex {
   runs: RunIndexEntry[];
   default: string;
   detectors: Record<string, string>;
   syscallNames: Record<string, string>;
+  source?: "collected" | "presentation-preview";
 }
 
 export type EncodedSeries<T> = [value: T, runLength: number][];
@@ -76,7 +82,7 @@ export interface RunData {
   cycleTids: number[];
   tierF: TierFData;
   /** Optional UI annotation; it is not emitted by the research exporter. */
-  source?: string;
+  source?: "collected" | "presentation-preview";
 }
 
 export interface ResultRow {

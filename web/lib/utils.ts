@@ -9,3 +9,8 @@ export function formatPercent(value: number | null | undefined, digits = 1): str
   if (value == null || !Number.isFinite(value)) return "—";
   return `${(value * 100).toFixed(digits)}%`;
 }
+
+/** Joins conditional class names without introducing a styling dependency. */
+export function classNames(...parts: Array<string | false | null | undefined>): string {
+  return parts.filter(Boolean).join(" ");
+}

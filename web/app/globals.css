@@ -5,6 +5,7 @@
 
   /* LockPulse systems-intelligence palette */
   --background: #080b12;
+  --header-background: #0a0d14;
   --surface: #0e1420;
   --elevated: #151e2d;
   --surface-high: #1b2638;
@@ -24,6 +25,25 @@
   --lp-slow: 360ms;
   --lp-ease: cubic-bezier(0.2, 0.7, 0.2, 1);
   --lp-content-width: 1600px;
+}
+
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --background: #f3f6fb;
+  --header-background: #eaf0f8;
+  --surface: #ffffff;
+  --elevated: #eaf0f8;
+  --surface-high: #e2eaf5;
+  --border: #d8e0ec;
+  --border-strong: #bdcadd;
+  --primary: #5145cd;
+  --secondary: #087eae;
+  --text: #172033;
+  --muted: #58667a;
+  --success: #087b55;
+  --danger: #c02f50;
+  --warning: #996300;
 }
 
 @theme inline {
@@ -309,4 +329,12 @@ input:disabled {
     animation-iteration-count: 1 !important;
     transition-duration: 0.01ms !important;
   }
+}
+
+.theme-icon-dark { display: inline-block; }
+.theme-icon-light { display: none; }
+:root[data-theme="light"] .theme-icon-dark { display: none; }
+:root[data-theme="light"] .theme-icon-light { display: inline-block; }
+:root[data-theme="light"] body {
+  background-image: radial-gradient(ellipse 72rem 40rem at 8% -20rem, rgb(76 89 196 / 8%), transparent 72%);
 }
