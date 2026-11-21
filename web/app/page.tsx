@@ -1,12 +1,4 @@
-import {
-  ArrowRight,
-  CircleAlert,
-  Database,
-  Eye,
-  Radio,
-  ScanSearch,
-  Timer,
-} from "lucide-react";
+import { Activity, ArrowRight, Clock3, Layers3, Radio, ShieldCheck, Timer } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Navbar from "@/components/shared/Navbar";
 import Footer from "@/components/shared/Footer";
@@ -14,8 +6,28 @@ import ActionLink from "@/components/shared/ActionLink";
 import StatusBadge from "@/components/shared/StatusBadge";
 import DeadlockAnimation from "@/components/landing/DeadlockAnimation";
 import Reveal from "@/components/landing/Reveal";
+import ThreadComparison from "@/components/landing/ThreadComparison";
 
-const steps: {
+const metrics: {
+  value: string;
+  label: string;
+  detail: string;
+  icon: LucideIcon;
+  tone: string;
+}[] = [
+  { value: "91/91", label: "Hang detections", detail: "Each: B2 · M2 · M3 on held-out hangs", icon: Activity, tone: "text-success" },
+  { value: "0", label: "False alarms", detail: "Each: B2 · M2 · M3 across 89 healthy runs", icon: ShieldCheck, tone: "text-success" },
+  { value: "47–69 ms", label: "Median detection delay", detail: "M2 47 ms · M3 55 ms · B2 69 ms", icon: Clock3, tone: "text-secondary" },
+  { value: "13", label: "Benchmark families", detail: "7 hang scenarios · 6 hard negatives", icon: Layers3, tone: "text-primary" },
+];
+
+const readouts = [
+  { label: "INPUT SOURCE", value: "/proc sampling", detail: "External thread telemetry", icon: Radio, color: "text-secondary" },
+  { label: "SAMPLE CADENCE", value: "5 ms", detail: "Partial telemetry · Tier P", icon: Timer, color: "text-primary" },
+  { label: "EVIDENCE VIEW", value: "Trace replay", detail: "States, alerts, events", icon: Activity, color: "text-success" },
+];
+
+const pipeline: {
   label: string;
   title: string;
   description: string;
@@ -24,7 +36,7 @@ const steps: {
 }[] = [
   {
     label: "OBSERVE",
-    title: "Read the thread context",
+    title: "Read thread context",
     description: "Pair thread state with CPU activity, context switches, and the current syscall.",
     icon: Radio,
     color: "text-secondary",
@@ -32,23 +44,17 @@ const steps: {
   {
     label: "DETECT",
     title: "Separate quiet from stuck",
-    description: "Use simple baselines and learned detectors to flag patterns that stop making progress.",
-    icon: CircleAlert,
+    description: "Apply baseline rules and learned detectors to identify patterns that stop making progress.",
+    icon: Activity,
     color: "text-primary",
   },
   {
     label: "INSPECT",
     title: "Review the evidence",
-    description: "Replay events and compare detector behavior across controlled benchmark runs.",
-    icon: ScanSearch,
+    description: "Replay thread states, detector alerts, and synchronization events from a recorded run.",
+    icon: ShieldCheck,
     color: "text-success",
   },
-];
-
-const readouts = [
-  { label: "INPUT SOURCE", value: "/proc sampling", detail: "External thread telemetry", icon: Radio, color: "text-secondary" },
-  { label: "SAMPLE CADENCE", value: "5 ms", detail: "Partial telemetry · Tier P", icon: Timer, color: "text-primary" },
-  { label: "EVIDENCE VIEW", value: "Trace replay", detail: "States, alerts, events", icon: Database, color: "text-success" },
 ];
 
 export default function Home() {
@@ -56,35 +62,31 @@ export default function Home() {
     <>
       <Navbar />
       <main className="flex-1 overflow-hidden bg-background text-text">
-        <section className="relative isolate overflow-hidden border-b border-border">
-          <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_72%_30%,rgba(99,102,241,0.14),transparent_45%),radial-gradient(ellipse_at_8%_92%,rgba(56,189,248,0.06),transparent_35%)]" />
-          <div className="mx-auto grid max-w-7xl items-center gap-10 px-5 py-14 sm:px-6 sm:py-20 lg:grid-cols-[0.9fr_1.1fr] lg:gap-14 lg:py-24">
-            <Reveal className="max-w-2xl">
+        <section aria-labelledby="hero-title" className="relative isolate overflow-hidden border-b border-border">
+          <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_77%_42%,rgba(84,76,186,0.18),transparent_45%),linear-gradient(90deg,transparent_45%,rgba(66,220,232,0.035))]" />
+          <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-[4.5%] hidden w-px bg-gradient-to-b from-transparent via-border-strong/70 to-transparent xl:block" />
+
+          <div className="lp-container grid items-center gap-9 pb-12 pt-10 sm:gap-12 sm:pb-16 sm:pt-14 lg:grid-cols-[0.78fr_1.22fr] lg:gap-8 lg:py-16 xl:gap-12 xl:py-20">
+            <Reveal className="relative z-10 max-w-2xl lg:pl-2">
               <div className="flex flex-wrap items-center gap-3">
-                <p className="flex items-center gap-2 text-[11px] font-semibold tracking-[0.2em] text-secondary">
-                  <span className="h-px w-7 bg-secondary" /> SYSTEM OVERVIEW · LINUX
-                </p>
-                <StatusBadge tone="preview">RESEARCH PREVIEW</StatusBadge>
+                <p className="lp-kicker"><span className="lp-kicker-line" />Linux thread observability</p>
+                <StatusBadge tone="preview">Research preview</StatusBadge>
               </div>
-
-              <h1 className="mt-6 text-[2.65rem] font-bold leading-[1.04] tracking-[-0.045em] sm:text-6xl lg:text-[4rem]">
-                Understand when a quiet system <span className="bg-gradient-to-r from-primary via-indigo-400 to-secondary bg-clip-text text-transparent">stops progressing.</span>
+              <h1 id="hero-title" className="mt-6 max-w-[12ch] text-[3.15rem] font-semibold leading-[0.94] tracking-[-0.065em] sm:mt-8 sm:text-6xl lg:text-[4.4rem] xl:text-[5.45rem]">
+                Detect the silence.<br /><span className="text-secondary">Understand the</span> <span className="text-primary">deadlock.</span>
               </h1>
-
-              <p className="mt-5 max-w-xl text-base leading-7 text-muted sm:text-lg sm:leading-8">
-                LockPulse combines thread-state samples with syscall context to investigate hangs that can look like ordinary sleep or blocked I/O.
+              <p className="mt-6 max-w-xl border-l border-secondary/50 pl-4 text-base leading-7 text-muted sm:mt-7 sm:text-lg sm:leading-8">
+                LockPulse analyzes thread-state telemetry and syscall context to distinguish real hangs from legitimate sleeping and waiting.
               </p>
-
-              <div className="mt-7 flex flex-wrap items-center gap-4">
-                <ActionLink href="/replay" className="group">
-                  Open the replay <ArrowRight aria-hidden="true" size={17} className="transition-transform group-hover:translate-x-1" />
+              <div className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-4 sm:mt-8">
+                <ActionLink href="/replay" className="group min-h-12 px-5">
+                  Explore a recorded run <ArrowRight aria-hidden="true" size={17} className="transition-transform group-hover:translate-x-1" />
                 </ActionLink>
-                <a href="#overview" className="rounded-md px-2 py-2 text-sm font-medium text-muted transition hover:text-text focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-secondary">
-                  How to read LockPulse <span aria-hidden="true" className="ml-1 text-secondary">↓</span>
+                <a href="#evidence" className="group inline-flex min-h-11 items-center gap-2 rounded-md px-2 text-sm font-medium text-muted transition-colors hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary">
+                  View held-out evidence <span aria-hidden="true" className="text-secondary transition-transform group-hover:translate-y-0.5">↓</span>
                 </a>
               </div>
-
-              <div className="mt-8 grid gap-2 border-t border-border/80 pt-4 sm:grid-cols-3">
+              <div className="mt-8 grid gap-2 border-t border-border/80 pt-4 sm:mt-9 sm:grid-cols-3">
                 {readouts.map(({ label, value, detail, icon: Icon, color }) => (
                   <div key={label} className="min-w-0 rounded-lg border border-border/80 bg-background/45 px-3 py-2.5">
                     <div className="flex items-center gap-2"><Icon aria-hidden="true" size={13} className={color} /><span className="font-mono text-[9px] font-semibold tracking-[0.14em] text-muted">{label}</span></div>
@@ -95,54 +97,114 @@ export default function Home() {
               </div>
             </Reveal>
 
-            <Reveal delay={0.08} className="w-full min-w-0">
-              <div className="mb-2 flex items-center justify-between gap-3 px-1 font-mono text-[9px] font-semibold tracking-[0.14em] text-muted">
+            <Reveal delay={0.08} className="relative min-w-0 lg:-mr-4 xl:-mr-8">
+              <div aria-hidden="true" className="absolute -inset-8 -z-10 bg-[radial-gradient(ellipse_at_50%_48%,rgba(87,82,198,0.17),transparent_66%)]" />
+              <div className="mb-2 flex items-center justify-between gap-3 px-1 font-mono text-[9px] font-semibold tracking-[0.14em] text-muted sm:text-[10px]">
                 <span>LOCKPULSE / TRACE CONSOLE</span>
-                <span className="text-warning">ILLUSTRATIVE TRACE</span>
+                <span className="text-warning">ILLUSTRATIVE SIMULATION</span>
               </div>
               <DeadlockAnimation />
+              <p className="mt-3 px-1 text-right font-mono text-[9px] uppercase tracking-[0.12em] text-muted/75 sm:text-[10px]">
+                Two-thread mutex cycle · not host monitoring
+              </p>
             </Reveal>
           </div>
         </section>
 
-        <section id="overview" aria-labelledby="overview-title" className="mx-auto max-w-7xl px-5 py-16 sm:px-6 sm:py-20 lg:py-24">
-          <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
-            <div className="max-w-2xl">
-              <p className="text-[11px] font-semibold tracking-[0.2em] text-primary">SIGNAL PIPELINE</p>
-              <h2 id="overview-title" className="mt-3 text-3xl font-bold tracking-tight sm:text-4xl">From sampled state to reviewable evidence.</h2>
+        <section id="evidence" aria-labelledby="evidence-title" className="scroll-mt-24 border-b border-border bg-[#0b1019]">
+          <div className="lp-container py-10 sm:py-12 lg:py-14">
+            <div className="mb-6 flex flex-col gap-3 border-b border-border pb-5 lg:flex-row lg:items-end lg:justify-between">
+              <div>
+                <p className="lp-kicker"><span className="lp-kicker-line" />Research evidence / held-out test</p>
+                <h2 id="evidence-title" className="mt-2 text-xl font-semibold tracking-tight sm:text-2xl">Measured on this benchmark.</h2>
+              </div>
+              <p className="max-w-xl text-xs leading-5 text-muted sm:text-sm">Frozen B2 futex-silence rule, M2 random forest, and M3 gradient boosting. Synthetic benchmark results; not a production guarantee.</p>
             </div>
-            <p className="max-w-lg text-sm leading-6 text-muted">Follow the signal from observation to alert, then inspect how it performed in the benchmark.</p>
-          </div>
 
-          <div className="mt-9 grid gap-3 md:grid-cols-3">
-            {steps.map((step, index) => {
-              const Icon = step.icon;
-              return (
-                <Reveal key={step.label} delay={index * 0.05}>
-                  <article className="group relative h-full min-h-[190px] overflow-hidden rounded-xl border border-border bg-surface/75 p-5 transition duration-300 hover:-translate-y-1 hover:border-primary/35 hover:bg-surface sm:p-6">
-                    <span aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/45 to-transparent" />
-                    <div className="flex items-center justify-between">
-                      <span className="font-mono text-[10px] font-semibold tracking-[0.18em] text-muted">STAGE 0{index + 1} <span className="mx-1 text-border">/</span> {step.label}</span>
-                      <span className={`rounded-lg border border-border bg-background p-2.5 transition-transform duration-300 group-hover:rotate-3 group-hover:scale-105 ${step.color}`}><Icon aria-hidden="true" size={18} /></span>
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-6 md:grid-cols-4 md:gap-x-0 md:gap-y-0">
+              {metrics.map((metric, index) => {
+                const Icon = metric.icon;
+                return (
+                  <Reveal key={metric.label} delay={index * 0.07} className={`min-w-0 ${index % 2 === 1 ? "border-l border-border pl-4 sm:pl-6 md:pl-7" : ""} ${index >= 2 ? "md:border-l md:border-border md:pl-7" : ""}`}>
+                    <div className="flex min-h-[112px] flex-col justify-between gap-2 pr-2 sm:min-h-[128px] sm:pr-5 md:px-5 md:first:pl-0">
+                      <div className="flex items-center justify-between gap-2">
+                        <dt className="font-mono text-[9px] font-medium uppercase tracking-[0.12em] text-muted sm:text-[10px] sm:tracking-[0.15em]">{metric.label}</dt>
+                        <Icon aria-hidden="true" size={16} className={`hidden shrink-0 sm:block ${metric.tone}`} />
+                      </div>
+                      <dd className={`whitespace-nowrap text-[2rem] font-semibold leading-none tracking-[-0.06em] sm:text-4xl lg:text-[2.55rem] ${metric.tone}`}>{metric.value}</dd>
+                      <p className="text-[10px] leading-4 text-muted sm:text-xs sm:leading-5">{metric.detail}</p>
                     </div>
-                    <h3 className="mt-6 text-lg font-semibold tracking-tight">{step.title}</h3>
-                    <p className="mt-2 text-sm leading-6 text-muted">{step.description}</p>
-                  </article>
-                </Reveal>
-              );
-            })}
+                  </Reveal>
+                );
+              })}
+            </dl>
+            <p className="mt-6 border-t border-border/70 pt-3 text-[11px] leading-5 text-muted sm:text-xs">Held-out test scope: 91 hangs and 89 healthy runs across three held-out benchmark families.</p>
           </div>
         </section>
 
-        <section className="border-t border-border bg-surface/35">
-          <div className="mx-auto flex max-w-7xl flex-col gap-4 px-5 py-7 sm:px-6 sm:py-8 md:flex-row md:items-center md:justify-between">
-            <div className="flex items-start gap-3">
-              <span className="rounded-lg border border-secondary/20 bg-secondary/10 p-2 text-secondary"><Eye aria-hidden="true" size={17} /></span>
-              <p className="max-w-3xl text-sm leading-6 text-muted">LockPulse is evaluated on a synthetic benchmark. Results describe these workloads; broader programs need their own evaluation.</p>
+        <section id="overview" aria-labelledby="overview-title" className="border-b border-border">
+          <div className="lp-container py-14 sm:py-18 lg:py-20">
+            <div className="flex flex-col gap-5 md:flex-row md:items-end md:justify-between">
+              <div className="max-w-2xl">
+                <p className="lp-kicker"><span className="lp-kicker-line" />Signal pipeline</p>
+                <h2 id="overview-title" className="mt-3 text-3xl font-semibold tracking-tight sm:text-4xl">From sampled state to reviewable evidence.</h2>
+              </div>
+              <p className="max-w-lg text-sm leading-6 text-muted">Follow the system from observation, through detector analysis, to an inspectable recorded run.</p>
             </div>
-            <ActionLink href="/results" variant="secondary" className="shrink-0 self-start md:self-auto">
-              View benchmark results <ArrowRight aria-hidden="true" size={16} />
-            </ActionLink>
+            <div className="mt-8 grid gap-3 md:grid-cols-3">
+              {pipeline.map((step, index) => {
+                const Icon = step.icon;
+                return (
+                  <Reveal key={step.label} delay={index * 0.06}>
+                    <article className="group relative h-full min-h-[190px] overflow-hidden rounded-xl border border-border bg-surface/75 p-5 transition duration-300 hover:-translate-y-1 hover:border-primary/35 hover:bg-surface sm:p-6">
+                      <span aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-primary/45 to-transparent" />
+                      <div className="flex items-center justify-between">
+                        <span className="font-mono text-[10px] font-semibold tracking-[0.18em] text-muted">STAGE 0{index + 1} <span className="mx-1 text-border">/</span> {step.label}</span>
+                        <span className={`rounded-lg border border-border bg-background p-2.5 transition-transform duration-300 group-hover:rotate-3 group-hover:scale-105 ${step.color}`}><Icon aria-hidden="true" size={18} /></span>
+                      </div>
+                      <h3 className="mt-6 text-lg font-semibold tracking-tight">{step.title}</h3>
+                      <p className="mt-2 text-sm leading-6 text-muted">{step.description}</p>
+                    </article>
+                  </Reveal>
+                );
+              })}
+            </div>
+          </div>
+        </section>
+
+        <section aria-labelledby="quiet-title" className="relative border-b border-border">
+          <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_16%_42%,rgba(66,220,232,0.055),transparent_42%)]" />
+          <div className="lp-container relative py-14 sm:py-18 lg:py-24">
+            <div className="mb-8 grid gap-5 lg:grid-cols-[0.75fr_1.25fr] lg:items-end lg:gap-12">
+              <Reveal>
+                <p className="lp-kicker"><span className="lp-kicker-line" />Quiet does not mean stuck</p>
+                <h2 id="quiet-title" className="mt-4 max-w-[12ch] text-3xl font-semibold leading-[1.02] tracking-[-0.05em] sm:text-4xl lg:text-[3.35rem]">One quiet CPU. Two different stories.</h2>
+              </Reveal>
+              <Reveal delay={0.06}>
+                <p className="max-w-2xl text-sm leading-7 text-muted sm:text-base">A sleeping worker can pause and resume normally. A hung worker may remain blocked. CPU-only monitoring can see little activity in both; syscall context shows what the thread is waiting on.</p>
+              </Reveal>
+            </div>
+            <Reveal delay={0.08}><ThreadComparison /></Reveal>
+          </div>
+        </section>
+
+        <section aria-labelledby="closing-title" className="relative overflow-hidden bg-[#0b1019]">
+          <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-2/3 bg-[radial-gradient(ellipse_at_90%_50%,rgba(140,124,255,0.13),transparent_63%)]" />
+          <Reveal className="lp-container relative grid gap-5 py-12 sm:py-16 lg:grid-cols-[1fr_auto] lg:items-center lg:gap-12 lg:py-20">
+            <div>
+              <p className="lp-kicker"><span className="lp-kicker-line" />Systems behavior / made inspectable</p>
+              <h2 id="closing-title" className="mt-4 max-w-[17ch] text-3xl font-semibold leading-[1.04] tracking-[-0.05em] sm:text-4xl lg:text-[3.25rem]">Observe the wait. Understand why progress stopped.</h2>
+            </div>
+            <p className="max-w-md border-l border-primary/45 pl-4 text-sm leading-7 text-muted sm:text-base">LockPulse combines sampled thread state and syscall context with a separate synchronization trace to examine wait relationships.</p>
+          </Reveal>
+        </section>
+
+        <section className="border-t border-border bg-surface/35">
+          <div className="lp-container flex flex-col gap-4 py-6 sm:py-7 md:flex-row md:items-center md:justify-between">
+            <p className="max-w-3xl text-xs leading-5 text-muted sm:text-sm">LockPulse is evaluated on a synthetic benchmark. These results describe the tested workloads and do not guarantee performance on other programs.</p>
+            <a href="#evidence" className="inline-flex min-h-10 shrink-0 items-center gap-2 self-start rounded-md px-2 text-sm font-semibold text-secondary transition hover:text-sky-300 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary md:self-auto">
+              Review benchmark evidence <ArrowRight aria-hidden="true" size={16} />
+            </a>
           </div>
         </section>
       </main>

@@ -1,11 +1,26 @@
-import type { RunSummary } from "@/lib/types";
+import type { RunIndexEntry } from "@/lib/types";
 
-export default function RunSelector({ runs, value, onChange }: { runs: RunSummary[]; value: string; onChange: (id: string) => void }) {
+interface RunSelectorProps {
+  runs: RunIndexEntry[];
+  value: string;
+  onChange: (runId: string) => void;
+}
+
+export default function RunSelector({ runs, value, onChange }: RunSelectorProps) {
   return (
-    <label className="grid gap-2 text-sm font-medium text-muted">
-      Recorded run
-      <select value={value} onChange={(event) => onChange(event.target.value)} className="min-h-11 rounded-xl border border-border bg-background/80 px-3 text-text outline-none transition hover:border-secondary/30 focus:border-secondary/50 focus:ring-2 focus:ring-secondary/15">
-        {runs.map((run) => <option key={run.runId} value={run.runId}>{run.family.replaceAll("_", " ")} · {run.truth} · {run.runId}</option>)}
+    <label className="grid gap-2 text-sm font-medium text-text">
+      <span>Recorded run</span>
+      <select
+        aria-label="Select a recorded run"
+        className="min-h-11 w-full rounded-lg border border-border bg-background px-3 py-2 text-sm text-text outline-none transition focus-visible:ring-2 focus-visible:ring-primary sm:min-w-80"
+        value={value}
+        onChange={(event) => onChange(event.currentTarget.value)}
+      >
+        {runs.map((run) => (
+          <option key={run.runId} value={run.runId}>
+            {run.family.replaceAll("_", " ")} · {run.runId} · {run.truth}
+          </option>
+        ))}
       </select>
     </label>
   );

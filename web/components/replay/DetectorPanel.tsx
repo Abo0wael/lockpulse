@@ -1,26 +1,27 @@
-"use client";
-
-import { motion, useReducedMotion } from "framer-motion";
 import type { RunData } from "@/lib/types";
 import { formatMs } from "@/lib/utils";
 
-const order = ["B1", "B2", "B3", "B4", "M1", "M2", "M3"];
+interface DetectorPanelProps { run: RunData; timeMs: number }
 
-export default function DetectorPanel({ run, timeMs }: { run: RunData; timeMs: number }) {
-  const reduceMotion = useReducedMotion();
+export default function DetectorPanel({ run, timeMs }: DetectorPanelProps) {
+  const names: Record<string, string> = {
+    B1: "fixed timeout", B2: "futex silence", B3: "wait-for graph", B4: "progress watchdog",
+    M1: "logistic regression", M2: "random forest", M3: "gradient boosting",
+  };
+  const detectorIds = Object.keys(run.outcomes);
   return (
-    <section className="rounded-2xl border border-border bg-surface/80 p-4 shadow-lg shadow-black/10 sm:p-5">
-      <div className="mb-4"><p className="text-[10px] font-semibold tracking-[0.16em] text-primary">LIVE AT CURSOR</p><h2 className="mt-1 font-semibold">Detector status</h2></div>
-      <div className="grid gap-2 sm:grid-cols-2">
-        {order.map((key) => {
-          const alert = run.alerts[key];
-          const fired = alert != null && alert <= timeMs;
-          return (
-            <motion.div key={key} layout className="flex items-center justify-between gap-2 rounded-xl border border-border/80 bg-background/70 px-3 py-2.5 transition-colors hover:border-primary/25">
-              <span><strong className="mr-2 rounded-md bg-primary/10 px-1.5 py-1 font-mono text-xs text-secondary">{key}</strong><span className="text-xs text-muted">{run.thresholds[key] != null ? `threshold ${run.thresholds[key]}` : "cycle detector"}</span></span>
-              <motion.span key={`${key}-${fired ? "alert" : "wait"}`} initial={reduceMotion ? false : { opacity: 0.6 }} animate={{ opacity: 1 }} transition={{ duration: reduceMotion ? 0 : 0.2 }} className={`text-xs font-semibold ${fired ? "text-warning" : "text-muted"}`}>{fired ? `Alert · ${formatMs(alert)}` : alert == null ? "No alert" : "Watching"}</motion.span>
-            </motion.div>
-          );
+    <section className="overflow-hidden rounded-xl border border-border bg-surface" aria-labelledby="detector-panel-title">
+      <div className="border-b border-border px-4 py-3 sm:px-5"><h2 id="detector-panel-title" className="font-semibold">Detector signals</h2><p className="mt-1 text-xs text-muted">Scores and first alerts from the exported run.</p></div>
+      <div className="max-h-80 divide-y divide-border/70 overflow-auto">
+        {detectorIds.map((detector) => {
+          const score = run.scores[detector]?.[run.tMs.findIndex((time) => time >= timeMs)];
+          const threshold = run.thresholds[detector];
+          const alert = run.alerts[detector];
+          const outcome = run.outcomes[detector];
+          return <div key={detector} className="grid grid-cols-[minmax(0,1fr)_auto] items-center gap-3 px-4 py-2.5 sm:px-5">
+            <div className="min-w-0"><p className="truncate text-sm font-medium">{detector} <span className="font-normal text-muted">{names[detector] ?? "detector"}</span></p><p className="mt-0.5 text-xs text-muted">{score == null ? "No per-tick score exported" : `Score ${score.toFixed(4)}${threshold == null ? "" : ` · threshold ${threshold.toFixed(4)}`}`}</p></div>
+            <div className="text-right"><p className={`text-xs font-medium ${alert != null && alert <= timeMs ? "text-danger" : "text-muted"}`}>{alert != null ? `Alert ${formatMs(alert, 1)}` : outcome?.kind ?? "No alert"}</p>{outcome?.delayMs != null && <p className="mt-0.5 text-[11px] text-muted">delay {formatMs(outcome.delayMs, 1)}</p>}</div>
+          </div>;
         })}
       </div>
     </section>

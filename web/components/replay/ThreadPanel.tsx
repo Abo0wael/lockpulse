@@ -1,32 +1,43 @@
-"use client";
+import type { RunData } from "@/lib/types";
 
-import { motion, useReducedMotion } from "framer-motion";
-import type { RunData, ThreadState } from "@/lib/types";
+interface ThreadPanelProps { run: RunData; index: number }
 
-const labels: Record<ThreadState, string> = { R: "Running", F: "Futex wait", I: "Sleep / I/O", B: "Other blocked", ".": "Not alive" };
-const tones: Record<ThreadState, string> = { R: "bg-success", F: "bg-danger", I: "bg-secondary", B: "bg-warning", ".": "bg-border" };
+function syscallAt(series: Array<[number | null, number]>, index: number): number | null | undefined {
+  let cursor = 0;
+  for (const [value, length] of series) {
+    cursor += length;
+    if (index < cursor) return value;
+  }
+  return undefined;
+}
 
-export default function ThreadPanel({ run, index }: { run: RunData; index: number }) {
-  const reduceMotion = useReducedMotion();
+const stateLabels: Record<string, string> = {
+  ".": "Not alive", R: "Running", F: "Futex wait", I: "Sleep / I/O", B: "Other blocked",
+};
+
+export default function ThreadPanel({ run, index }: ThreadPanelProps) {
   return (
-    <section className="rounded-2xl border border-border bg-surface/80 p-4 shadow-lg shadow-black/10 sm:p-5">
-      <div className="mb-4 flex items-center justify-between">
-        <div><p className="text-[10px] font-semibold tracking-[0.16em] text-secondary">THREAD ACTIVITY</p><h2 className="mt-1 font-semibold">Thread states</h2></div>
-        <span className="rounded-lg border border-border bg-background/70 px-2.5 py-1.5 font-mono text-xs text-text">{Math.round(run.tMs[index] ?? 0)} ms</span>
+    <section className="overflow-hidden rounded-xl border border-border bg-surface" aria-labelledby="thread-panel-title">
+      <div className="flex items-center justify-between border-b border-border px-4 py-3 sm:px-5">
+        <h2 id="thread-panel-title" className="font-semibold">Thread state</h2>
+        <span className="text-xs text-muted">{run.live[index] ?? 0} live · {run.futex[index] ?? 0} futex</span>
       </div>
-      <div className="grid gap-2 sm:grid-cols-2 xl:grid-cols-3">
-        {run.threads.map((thread) => {
-          const state = (thread.states[index] ?? ".") as ThreadState;
-          return (
-            <motion.div key={thread.tid} layout={!reduceMotion} whileHover={reduceMotion ? undefined : { y: -2 }} transition={{ duration: reduceMotion ? 0 : 0.18 }} className="flex items-center gap-3 rounded-xl border border-border/80 bg-background/70 px-3 py-2.5 transition-colors hover:border-secondary/25">
-              <motion.span key={`${thread.tid}-${state}`} initial={reduceMotion ? false : { scale: 0.6, opacity: 0.5 }} animate={{ scale: 1, opacity: 1 }} transition={{ duration: reduceMotion ? 0 : 0.2 }} className={`h-2.5 w-2.5 shrink-0 rounded-full ${tones[state]}`} />
-              <span className="min-w-0 flex-1"><span className="block text-sm font-medium">Thread {thread.tid}</span><span className="block text-xs text-muted">{labels[state]}</span></span>
-              <span className="font-mono text-xs text-muted">{state}</span>
-            </motion.div>
-          );
-        })}
+      <div className="max-h-80 overflow-auto">
+        <table className="w-full text-left text-sm">
+          <thead className="sticky top-0 bg-elevated text-xs text-muted"><tr><th className="px-4 py-2 font-medium sm:px-5">TID</th><th className="px-4 py-2 font-medium">State</th><th className="px-4 py-2 font-medium">Syscall nr</th></tr></thead>
+          <tbody className="divide-y divide-border/70">
+            {run.threads.map((thread) => {
+              const state = thread.states[index] ?? ".";
+              const syscall = syscallAt(thread.syscalls, index);
+              return <tr key={thread.tid}>
+                <th scope="row" className="px-4 py-2.5 font-mono text-xs text-secondary sm:px-5">{thread.tid}</th>
+                <td className="px-4 py-2.5"><span className={`inline-flex items-center gap-2 text-xs ${state === "F" || state === "B" ? "text-warning" : state === "R" ? "text-success" : "text-muted"}`}><i className="h-1.5 w-1.5 rounded-full bg-current" />{stateLabels[state] ?? `Unknown (${state})`}</span></td>
+                <td className="px-4 py-2.5 font-mono text-xs text-muted">{syscall == null ? syscall === null ? "—" : "No sample" : syscall}</td>
+              </tr>;
+            })}
+          </tbody>
+        </table>
       </div>
-      <p className="mt-4 text-xs text-muted">R running · F futex · I sleep or I/O · B other blocked · . not alive</p>
     </section>
   );
 }

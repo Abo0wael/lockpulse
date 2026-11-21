@@ -1,15 +1,22 @@
 import type { Metadata } from "next";
-import { Geist, Geist_Mono } from "next/font/google";
+import localFont from "next/font/local";
 import "./globals.css";
 
-const geistSans = Geist({
-  variable: "--font-geist-sans",
-  subsets: ["latin"],
+const plusJakarta = localFont({
+  src: "../public/fonts/plus-jakarta-sans-latin.woff2",
+  variable: "--font-plus-jakarta",
+  weight: "400 700",
+  display: "swap",
 });
 
-const geistMono = Geist_Mono({
-  variable: "--font-geist-mono",
-  subsets: ["latin"],
+const ibmPlexMono = localFont({
+  src: [
+    { path: "../public/fonts/ibm-plex-mono-regular-latin.woff2", weight: "400" },
+    { path: "../public/fonts/ibm-plex-mono-medium-latin.woff2", weight: "500" },
+    { path: "../public/fonts/ibm-plex-mono-semibold-latin.woff2", weight: "600" },
+  ],
+  variable: "--font-ibm-plex-mono",
+  display: "swap",
 });
 
 export const metadata: Metadata = {
@@ -22,7 +29,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      className={`${plusJakarta.variable} ${ibmPlexMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>
