@@ -1,46 +1,23 @@
 import Link from "next/link";
-import {
-  Activity,
-  ArrowRight,
-  ArrowUpRight,
-  BarChart3,
-  BookOpen,
-  Clock3,
-  Layers3,
-  Play,
-  ShieldCheck,
-} from "lucide-react";
+import { Activity, ArrowRight, Clock3, Layers3, ShieldCheck } from "lucide-react";
 import type { LucideIcon } from "lucide-react";
 import Navbar from "@/components/shared/Navbar";
 import Footer from "@/components/shared/Footer";
 import DeadlockAnimation from "@/components/landing/DeadlockAnimation";
 import Reveal from "@/components/landing/Reveal";
+import ThreadComparison from "@/components/landing/ThreadComparison";
 
 const metrics: {
   value: string;
   label: string;
   detail: string;
   icon: LucideIcon;
-  accent: string;
+  tone: string;
 }[] = [
-  { value: "91/91", label: "Hang detections", detail: "B2 · M2 · M3 · held-out hangs", icon: Activity, accent: "text-success" },
-  { value: "0", label: "False alarms", detail: "B2 · M2 · M3 · 89 healthy test runs", icon: ShieldCheck, accent: "text-success" },
-  { value: "47–69 ms", label: "Median detection delay", detail: "M2 47 · M3 55 · B2 69 ms", icon: Clock3, accent: "text-secondary" },
-  { value: "13", label: "Benchmark families", detail: "7 hang scenarios · 6 hard negatives", icon: Layers3, accent: "text-primary" },
-];
-
-const pages: {
-  href: string;
-  number: string;
-  title: string;
-  description: string;
-  icon: LucideIcon;
-  label: string;
-}[] = [
-  { href: "/replay", number: "01", title: "Replay", description: "Move through a run: thread states, detector alerts, and synchronization events.", icon: Play, label: "INSPECT A RUN" },
-  { href: "/results", number: "02", title: "Results", description: "Compare frozen detectors across the held-out benchmark.", icon: BarChart3, label: "MEASURE PERFORMANCE" },
-  { href: "/why-syscall", number: "03", title: "Why Syscall", description: "Understand how syscall context separates sleep from blocked waits.", icon: Activity, label: "READ THE SIGNAL" },
-  { href: "/method", number: "04", title: "Methodology", description: "Trace the benchmark, telemetry tiers, detectors, and evaluation protocol.", icon: BookOpen, label: "FOLLOW THE METHOD" },
+  { value: "91/91", label: "Hang detections", detail: "B2 · M2 · M3 · held-out hangs", icon: Activity, tone: "text-success" },
+  { value: "0", label: "False alarms", detail: "B2 · M2 · M3 · across 89 healthy runs", icon: ShieldCheck, tone: "text-success" },
+  { value: "47–69 ms", label: "Median detection delay", detail: "M2 47 ms · M3 55 ms · B2 69 ms", icon: Clock3, tone: "text-secondary" },
+  { value: "13", label: "Benchmark families", detail: "7 hang scenarios · 6 hard negatives", icon: Layers3, tone: "text-primary" },
 ];
 
 export default function Home() {
@@ -48,134 +25,102 @@ export default function Home() {
     <>
       <Navbar />
       <main className="flex-1 overflow-hidden bg-background text-text">
-        <section className="relative isolate overflow-hidden border-b border-border">
-          <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_78%_34%,rgba(99,102,241,0.17),transparent_46%),linear-gradient(90deg,transparent_58%,rgba(56,189,248,0.025))]" />
-          <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-[5.5%] hidden w-px bg-gradient-to-b from-transparent via-border to-transparent xl:block" />
+        <section aria-labelledby="hero-title" className="relative isolate overflow-hidden border-b border-border">
+          <div aria-hidden="true" className="pointer-events-none absolute inset-0 -z-10 bg-[radial-gradient(ellipse_at_77%_42%,rgba(84,76,186,0.18),transparent_45%),linear-gradient(90deg,transparent_45%,rgba(66,220,232,0.035))]" />
+          <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 left-[4.5%] hidden w-px bg-gradient-to-b from-transparent via-border-strong/70 to-transparent xl:block" />
 
-          <div className="mx-auto grid max-w-[1440px] gap-10 px-5 pb-12 pt-12 sm:px-8 sm:pb-16 sm:pt-16 lg:grid-cols-[0.72fr_1.28fr] lg:items-center lg:gap-9 lg:px-10 lg:py-20 xl:px-16 xl:py-24">
-            <Reveal className="relative z-10 max-w-xl lg:pl-2">
-              <p className="flex items-center gap-3 font-mono text-[10px] uppercase tracking-[0.22em] text-secondary sm:text-xs">
-                <span className="h-px w-8 bg-secondary" /> Linux thread observability <span className="text-muted/60">/ 01</span>
-              </p>
-              <h1 className="mt-7 max-w-[11ch] text-[3.35rem] font-semibold leading-[0.96] tracking-[-0.065em] sm:text-6xl lg:text-[4.4rem] xl:text-[5.15rem]">
-                When progress <span className="text-primary">breaks,</span> find where.
+          <div className="lp-container grid items-center gap-9 pb-12 pt-10 sm:gap-12 sm:pb-16 sm:pt-14 lg:grid-cols-[0.78fr_1.22fr] lg:gap-8 lg:py-16 xl:gap-12 xl:py-20">
+            <Reveal className="relative z-10 max-w-2xl lg:pl-2">
+              <p className="lp-kicker"><span className="lp-kicker-line" />Linux thread observability <span className="text-muted/70">/ SYSTEMS INTELLIGENCE</span></p>
+              <h1 id="hero-title" className="mt-6 max-w-[12ch] text-[3.15rem] font-semibold leading-[0.94] tracking-[-0.065em] sm:mt-8 sm:text-6xl lg:text-[4.4rem] xl:text-[5.45rem]">
+                Detect the silence.<br /><span className="text-secondary">Understand the</span> <span className="text-primary">deadlock.</span>
               </h1>
-              <p className="mt-7 max-w-md border-l border-primary/50 pl-4 text-base leading-7 text-muted sm:text-lg sm:leading-8">
-                LockPulse reads thread state and syscall context to tell a real hang from a worker that is simply sleeping or waiting on I/O.
+              <p className="mt-6 max-w-xl border-l border-secondary/50 pl-4 text-base leading-7 text-muted sm:mt-7 sm:text-lg sm:leading-8">
+                LockPulse analyzes thread-state telemetry and syscall context to distinguish real hangs from legitimate sleeping and waiting.
               </p>
-              <div className="mt-8 flex flex-col gap-3 sm:flex-row">
-                <Link href="/replay" className="lp-button-primary group w-full focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-secondary sm:w-auto">
-                  Explore a run <ArrowRight aria-hidden="true" size={17} className="transition-transform group-hover:translate-x-1" />
+              <div className="mt-7 flex flex-wrap items-center gap-x-5 gap-y-4 sm:mt-8">
+                <Link href="/replay" className="lp-button-primary group min-h-12 px-5 focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-secondary">
+                  Explore a recorded run <ArrowRight aria-hidden="true" size={17} className="transition-transform group-hover:translate-x-1" />
                 </Link>
-                <Link href="/method" className="lp-button-secondary w-full focus-visible:outline-2 focus-visible:outline-offset-4 focus-visible:outline-secondary sm:w-auto">
-                  How it works <ArrowUpRight aria-hidden="true" size={16} className="text-muted" />
-                </Link>
+                <a href="#evidence" className="group inline-flex min-h-11 items-center gap-2 rounded-md px-2 text-sm font-medium text-muted transition-colors hover:text-text focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary">
+                  View held-out evidence <span aria-hidden="true" className="text-secondary transition-transform group-hover:translate-y-0.5">↓</span>
+                </a>
               </div>
-              <div className="mt-9 flex flex-wrap gap-x-5 gap-y-3 font-mono text-[10px] uppercase tracking-[0.13em] text-muted sm:text-[11px]">
-                <span className="inline-flex items-center gap-2"><span className="h-1.5 w-1.5 rounded-full bg-success" /> External sampling</span>
-                <span>5 ms cadence</span>
-                <span>Research benchmark</span>
+              <div className="mt-8 flex flex-wrap gap-x-5 gap-y-2 border-t border-border/80 pt-4 font-mono text-[10px] uppercase tracking-[0.12em] text-muted sm:mt-9 sm:gap-x-6">
+                <span className="inline-flex items-center gap-2"><span aria-hidden="true" className="size-1.5 rounded-full bg-secondary" />5 ms external sampling</span>
+                <span>Linux · pthreads</span>
+                <span>Held-out benchmark</span>
               </div>
             </Reveal>
 
-            <Reveal delay={0.08} className="relative min-w-0 lg:-mr-6 xl:-mr-10">
-              <div aria-hidden="true" className="absolute -inset-6 -z-10 bg-[radial-gradient(ellipse_at_52%_50%,rgba(99,102,241,0.12),transparent_68%)]" />
+            <Reveal delay={0.08} className="relative min-w-0 lg:-mr-4 xl:-mr-8">
+              <div aria-hidden="true" className="absolute -inset-8 -z-10 bg-[radial-gradient(ellipse_at_50%_48%,rgba(87,82,198,0.17),transparent_66%)]" />
               <DeadlockAnimation />
-              <div className="mt-3 flex items-center justify-between gap-3 px-1 font-mono text-[9px] uppercase tracking-[0.14em] text-muted/80 sm:text-[10px]">
-                <span>Wait relationship / ownership relationship</span>
-                <span className="hidden sm:inline">Illustrative graph · not a live process</span>
-              </div>
+              <p className="mt-3 px-1 text-right font-mono text-[9px] uppercase tracking-[0.12em] text-muted/75 sm:text-[10px]">
+                Two-thread mutex cycle · illustrative sequence · not host monitoring
+              </p>
             </Reveal>
           </div>
         </section>
 
-        <section aria-labelledby="metrics-title" className="relative border-b border-border bg-[#0e1017]">
-          <div className="mx-auto max-w-[1440px] px-5 py-10 sm:px-8 sm:py-12 lg:px-10 xl:px-16">
-            <div className="mb-6 flex flex-col gap-2 border-b border-border pb-5 sm:flex-row sm:items-end sm:justify-between">
+        <section id="evidence" aria-labelledby="evidence-title" className="scroll-mt-24 border-b border-border bg-[#0b1019]">
+          <div className="lp-container py-10 sm:py-12 lg:py-14">
+            <div className="mb-6 flex flex-col gap-3 border-b border-border pb-5 lg:flex-row lg:items-end lg:justify-between">
               <div>
-                <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-primary">Experimental readout / held-out test</p>
-                <h2 id="metrics-title" className="mt-2 text-lg font-medium tracking-tight text-text sm:text-xl">Frozen detector configurations</h2>
+                <p className="lp-kicker"><span className="lp-kicker-line" />Research evidence / held-out test</p>
+                <h2 id="evidence-title" className="mt-2 text-xl font-semibold tracking-tight sm:text-2xl">Measured on this benchmark.</h2>
               </div>
-              <p className="max-w-md text-xs leading-5 text-muted">B2 futex-silence rule, M2 random forest, and M3 gradient boosting. Synthetic benchmark results, not a production guarantee.</p>
+              <p className="max-w-xl text-xs leading-5 text-muted sm:text-sm">Frozen B2 futex-silence rule, M2 random forest, and M3 gradient boosting. Synthetic benchmark results; not a production guarantee.</p>
             </div>
 
-            <dl className="grid grid-cols-2 gap-x-4 gap-y-6 md:grid-cols-4 md:gap-x-0">
+            <dl className="grid grid-cols-2 gap-x-4 gap-y-6 md:grid-cols-4 md:gap-x-0 md:gap-y-0">
               {metrics.map((metric, index) => {
                 const Icon = metric.icon;
                 return (
-                  <Reveal key={metric.label} delay={index * 0.06} className={`min-w-0 ${index % 2 === 1 ? "border-l border-border pl-4 sm:pl-6 md:pl-7" : ""} ${index >= 2 ? "md:border-l md:border-border md:pl-7" : ""}`}>
-                    <div className="flex min-h-[106px] flex-col justify-between gap-2 pr-2 sm:min-h-[118px] sm:pr-5">
+                  <Reveal key={metric.label} delay={index * 0.07} className={`min-w-0 ${index % 2 === 1 ? "border-l border-border pl-4 sm:pl-6 md:pl-7" : ""} ${index >= 2 ? "md:border-l md:border-border md:pl-7" : ""}`}>
+                    <div className="flex min-h-[112px] flex-col justify-between gap-2 pr-2 sm:min-h-[128px] sm:pr-5 md:px-5 md:first:pl-0">
                       <div className="flex items-center justify-between gap-2">
-                        <dt className="font-mono text-[9px] uppercase tracking-[0.12em] text-muted sm:text-[10px] sm:tracking-[0.16em]">{metric.label}</dt>
-                        <Icon aria-hidden="true" size={15} className={`hidden shrink-0 sm:block ${metric.accent}`} />
+                        <dt className="font-mono text-[9px] font-medium uppercase tracking-[0.12em] text-muted sm:text-[10px] sm:tracking-[0.15em]">{metric.label}</dt>
+                        <Icon aria-hidden="true" size={16} className={`hidden shrink-0 sm:block ${metric.tone}`} />
                       </div>
-                      <dd className={`text-3xl font-semibold tracking-[-0.055em] sm:text-4xl lg:text-[2.6rem] ${metric.accent}`}>{metric.value}</dd>
-                      <p className="text-[10px] leading-4 text-muted sm:text-xs">{metric.detail}</p>
+                      <dd className={`whitespace-nowrap text-[2rem] font-semibold leading-none tracking-[-0.06em] sm:text-4xl lg:text-[2.55rem] ${metric.tone}`}>{metric.value}</dd>
+                      <p className="text-[10px] leading-4 text-muted sm:text-xs sm:leading-5">{metric.detail}</p>
                     </div>
                   </Reveal>
                 );
               })}
             </dl>
+            <p className="mt-6 border-t border-border/70 pt-3 text-[11px] leading-5 text-muted sm:text-xs">Held-out test scope: 91 hangs and 89 healthy runs across three held-out benchmark families.</p>
           </div>
         </section>
 
-        <section aria-labelledby="explore-title" className="relative mx-auto grid max-w-[1440px] gap-9 px-5 py-16 sm:px-8 sm:py-20 lg:grid-cols-[0.78fr_1.22fr] lg:gap-16 lg:px-10 lg:py-24 xl:px-16">
-          <Reveal className="lg:sticky lg:top-28 lg:self-start">
-            <p className="font-mono text-[10px] uppercase tracking-[0.2em] text-primary">Navigate the signal</p>
-            <h2 id="explore-title" className="mt-4 max-w-[12ch] text-3xl font-semibold leading-[1.06] tracking-[-0.045em] sm:text-4xl lg:text-[3.25rem]">
-              From a sampled signal to an explainable result.
-            </h2>
-            <p className="mt-5 max-w-sm text-sm leading-6 text-muted">
-              Move from a concrete run to the benchmark evidence, then into the reasoning behind the detector.
-            </p>
-            <div className="mt-8 hidden items-center gap-3 font-mono text-[10px] uppercase tracking-[0.14em] text-muted lg:flex">
-              <span className="h-px w-10 bg-border" /> Four paths through LockPulse
+        <section aria-labelledby="quiet-title" className="relative border-b border-border">
+          <div aria-hidden="true" className="pointer-events-none absolute inset-0 bg-[radial-gradient(ellipse_at_16%_42%,rgba(66,220,232,0.055),transparent_42%)]" />
+          <div className="lp-container relative py-14 sm:py-18 lg:py-24">
+            <div className="mb-8 grid gap-5 lg:grid-cols-[0.75fr_1.25fr] lg:items-end lg:gap-12">
+              <Reveal>
+                <p className="lp-kicker"><span className="lp-kicker-line" />Quiet does not mean stuck</p>
+                <h2 id="quiet-title" className="mt-4 max-w-[12ch] text-3xl font-semibold leading-[1.02] tracking-[-0.05em] sm:text-4xl lg:text-[3.35rem]">One quiet CPU. Two different stories.</h2>
+              </Reveal>
+              <Reveal delay={0.06}>
+                <p className="max-w-2xl text-sm leading-7 text-muted sm:text-base">A sleeping worker can pause and resume normally. A hung worker may remain blocked. CPU-only monitoring can see little activity in both; syscall context shows what the thread is waiting on.</p>
+              </Reveal>
             </div>
+            <Reveal delay={0.08}>
+              <ThreadComparison />
+            </Reveal>
+          </div>
+        </section>
+
+        <section aria-labelledby="closing-title" className="relative overflow-hidden bg-[#0b1019]">
+          <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 w-2/3 bg-[radial-gradient(ellipse_at_90%_50%,rgba(140,124,255,0.13),transparent_63%)]" />
+          <Reveal className="lp-container relative grid gap-5 py-12 sm:py-16 lg:grid-cols-[1fr_auto] lg:items-center lg:gap-12 lg:py-20">
+            <div>
+              <p className="lp-kicker"><span className="lp-kicker-line" />Systems behavior / made inspectable</p>
+              <h2 id="closing-title" className="mt-4 max-w-[17ch] text-3xl font-semibold leading-[1.04] tracking-[-0.05em] sm:text-4xl lg:text-[3.25rem]">Observe the wait. Understand why progress stopped.</h2>
+            </div>
+            <p className="max-w-md border-l border-primary/45 pl-4 text-sm leading-7 text-muted sm:text-base">LockPulse combines sampled thread state and syscall context with a separate synchronization trace to examine wait relationships.</p>
           </Reveal>
-
-          <nav aria-label="Explore LockPulse" className="min-w-0">
-            <ol className="border-t border-border">
-              {pages.map((page, index) => {
-                const Icon = page.icon;
-                const featured = index === 0;
-                return (
-                  <li key={page.href}>
-                    <Reveal delay={index * 0.055}>
-                      <Link
-                        href={page.href}
-                        className={`group relative grid min-w-0 grid-cols-[2.4rem_1fr_auto] items-center gap-3 border-b border-border px-1 py-5 transition-colors hover:bg-white/[0.02] focus-visible:outline-2 focus-visible:outline-offset-[-2px] focus-visible:outline-secondary sm:grid-cols-[3rem_1fr_auto] sm:gap-5 ${featured ? "sm:py-7" : "sm:py-5"}`}
-                      >
-                        <span className={`font-mono text-xs tracking-widest ${featured ? "text-primary" : "text-muted/70"}`}>{page.number}</span>
-                        <span className="flex min-w-0 items-center gap-3 sm:gap-4">
-                          <span className={`grid h-10 w-10 shrink-0 place-items-center border transition-colors sm:h-11 sm:w-11 ${featured ? "border-primary/35 bg-primary/10 text-primary group-hover:bg-primary/15" : "border-border bg-surface/60 text-muted group-hover:border-secondary/35 group-hover:text-secondary"}`}>
-                            <Icon aria-hidden="true" size={18} />
-                          </span>
-                          <span className="min-w-0">
-                            <span className={`block truncate font-semibold tracking-tight text-text ${featured ? "text-xl sm:text-2xl" : "text-base sm:text-lg"}`}>{page.title}</span>
-                            <span className="mt-1 block font-mono text-[8px] uppercase tracking-[0.14em] text-muted sm:text-[9px]">{page.label}</span>
-                            <span className="mt-2 hidden max-w-lg text-sm leading-5 text-muted sm:block">{page.description}</span>
-                          </span>
-                        </span>
-                        <ArrowRight aria-hidden="true" size={17} className="text-muted transition duration-200 group-hover:translate-x-1 group-hover:text-secondary" />
-                      </Link>
-                    </Reveal>
-                  </li>
-                );
-              })}
-            </ol>
-          </nav>
-        </section>
-
-        <section className="border-t border-border bg-[#0e1017]">
-          <div className="mx-auto flex max-w-[1440px] flex-col gap-5 px-5 py-7 sm:px-8 sm:py-8 md:flex-row md:items-center md:justify-between lg:px-10 xl:px-16">
-            <div className="flex items-start gap-3">
-              <span className="mt-0.5 border-l-2 border-secondary px-3 py-1 font-mono text-[9px] uppercase tracking-[0.14em] text-secondary">Hard negatives</span>
-              <p className="max-w-3xl text-xs leading-5 text-muted sm:text-sm sm:leading-6">Sleeping workers, heavy contention, long critical sections, and blocked I/O help test whether quiet threads are actually hung.</p>
-            </div>
-            <Link href="/why-syscall" className="group inline-flex shrink-0 items-center gap-2 text-sm font-semibold text-text transition hover:text-secondary">
-              Why syscall context? <ArrowRight aria-hidden="true" size={16} className="text-secondary transition-transform group-hover:translate-x-1" />
-            </Link>
-          </div>
         </section>
       </main>
       <Footer />
