@@ -1,0 +1,54 @@
+{
+  "source": "presentation-preview",
+  "default": "preview-semaphore-hang",
+  "detectors": {
+    "B1": "B1 fixed timeout",
+    "B2": "B2 futex silence",
+    "B3": "B3 wait-for graph",
+    "B4": "B4 progress watchdog",
+    "M1": "M1 logistic regression",
+    "M2": "M2 random forest",
+    "M3": "M3 gradient boosting"
+  },
+  "syscallNames": {
+    "-1": "running",
+    "0": "read",
+    "35": "nanosleep",
+    "202": "futex"
+  },
+  "runs": [
+    {
+      "runId": "preview-semaphore-hang",
+      "family": "sem_never_posted",
+      "split": "test",
+      "truth": "hang",
+      "t0Ms": 500,
+      "threads": 4,
+      "durationMs": 2200,
+      "config": "preview",
+      "seed": 0
+    },
+    {
+      "runId": "preview-dining-deadlock",
+      "family": "dining_philosophers",
+      "split": "test",
+      "truth": "deadlock",
+      "t0Ms": 500,
+      "threads": 6,
+      "durationMs": 2200,
+      "config": "preview",
+      "seed": 0
+    },
+    {
+      "runId": "preview-blocked-io",
+      "family": "blocked_on_io",
+      "split": "test",
+      "truth": "healthy",
+      "t0Ms": null,
+      "threads": 3,
+      "durationMs": 2200,
+      "config": "preview",
+      "seed": 0
+    }
+  ]
+}

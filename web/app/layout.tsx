@@ -23,7 +23,15 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
     <html
       lang="en"
       className={`${geistSans.variable} ${geistMono.variable} h-full antialiased`}
+      suppressHydrationWarning
     >
+      <head>
+        <script
+          dangerouslySetInnerHTML={{
+            __html: `let savedTheme = ""; try { savedTheme = window.localStorage.getItem("lockpulse-theme") || ""; } catch {} if (!savedTheme) savedTheme = document.cookie.match(/(?:^|; )lockpulse-theme=(light|dark)/)?.[1] || ""; if (savedTheme === "light") document.documentElement.dataset.theme = "light";`,
+          }}
+        />
+      </head>
       <body className="min-h-full flex flex-col">{children}</body>
     </html>
   );

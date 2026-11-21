@@ -2,9 +2,11 @@
 @import "tailwindcss";
 
 :root {
-  --background: #0b0d12;
-  --surface: #13161f;
-  --border: #222736;
+  color-scheme: dark;
+  --background: #090b11;
+  --surface: #111621;
+  --header-background: #0d1018;
+  --border: #222a3a;
   --primary: #6366f1;
   --secondary: #38bdf8;
   --text: #eceff6;
@@ -13,6 +15,21 @@
   --success: #34d399;
   --danger: #fb7185;
   --warning: #fbbf24;
+}
+
+:root[data-theme="light"] {
+  color-scheme: light;
+  --background: #f3f6fb;
+  --surface: #ffffff;
+  --header-background: #eaf0f8;
+  --border: #d8e0ec;
+  --primary: #5145cd;
+  --secondary: #087eae;
+  --text: #172033;
+  --muted: #58667a;
+  --success: #087b55;
+  --danger: #c02f50;
+  --warning: #996300;
 }
 
 @theme inline {
@@ -33,7 +50,73 @@
 }
 
 body {
+  position: relative;
+  isolation: isolate;
   background: var(--background);
   color: var(--text);
   font-family: var(--font-geist-sans), Arial, Helvetica, sans-serif;
+}
+
+body::before {
+  position: fixed;
+  z-index: -1;
+  inset: 0;
+  background-image:
+    radial-gradient(ellipse at 50% -25%, rgba(99, 102, 241, 0.12), transparent 52%),
+    linear-gradient(rgba(255, 255, 255, 0.018) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(255, 255, 255, 0.018) 1px, transparent 1px);
+  background-size: auto, 56px 56px, 56px 56px;
+  content: "";
+  mask-image: linear-gradient(to bottom, black, transparent 75%);
+  pointer-events: none;
+}
+
+:root[data-theme="light"] body::before {
+  background-image:
+    radial-gradient(ellipse at 50% -25%, rgba(81, 69, 205, 0.07), transparent 52%),
+    linear-gradient(rgba(23, 32, 51, 0.035) 1px, transparent 1px),
+    linear-gradient(90deg, rgba(23, 32, 51, 0.035) 1px, transparent 1px);
+}
+
+html {
+  scroll-behavior: smooth;
+  scroll-padding-top: 5rem;
+}
+
+::selection {
+  background: rgba(99, 102, 241, 0.45);
+  color: white;
+}
+
+:root[data-theme="light"] ::selection {
+  background: rgba(81, 69, 205, 0.2);
+  color: #172033;
+}
+
+button,
+a {
+  -webkit-tap-highlight-color: transparent;
+}
+
+.theme-icon-light {
+  display: none;
+}
+
+:root[data-theme="light"] .theme-icon-dark {
+  display: none;
+}
+
+:root[data-theme="light"] .theme-icon-light {
+  display: block;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after {
+    scroll-behavior: auto !important;
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    transition-duration: 0.01ms !important;
+  }
 }
