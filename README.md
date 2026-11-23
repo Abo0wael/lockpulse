@@ -1,3 +1,7 @@
+Live demo: https://lockpulse-pearl.vercel.app/
+
+[![LockPulse website, landing page](docs/img/website_landing.png)](https://lockpulse-pearl.vercel.app/)
+
 # LockPulse
 
 LockPulse is a research prototype. It detects hangs (deadlocks, lost wakeups, barrier and semaphore hangs) in multithreaded C programs that use pthreads on Linux. It records two kinds of telemetry at the same time:
@@ -148,6 +152,35 @@ Phases 3 and 4 are pure Python and run on Windows, macOS or Linux. The commands 
    ```
 
 `make all` stays the C build that CI uses; the ML pipeline is `make reproduce` (phase 3 then phase 4), plus `make phase4` and `make demo RUN=<run_id>`.
+
+## Website
+
+The website (Next.js, static export, deployed on Vercel) presents the frozen phase-4 results and replays recorded runs. The source is in [web/](web/); its last audit is [web/AUDIT.md](web/AUDIT.md).
+
+| Page | What it shows |
+|---|---|
+| `/` | Overview: the problem (a quiet CPU is not a diagnosis), the pipeline, and the headline held-out test numbers. |
+| `/replay` | One recorded run, tick by tick. Shows: a per-thread timeline (running / futex / sleep-IO / not alive per 5 ms tick) with the t0 marker and every detector's alert; the M3 score with its frozen threshold; B2 futex silence with T; thread states and syscalls; detector scores; the Tier F wait-for graph; sync events. The run picker lists test runs first. `?run=<id>&t=<ms>` links to a moment. |
+| `/results` | Detector comparison (B1–B4, M1–M3) on the test or validation split, delays, false alarms, per-family results. |
+| `/why-syscall` | Why syscall context matters, with the feature ablation (M2/M3 drop from 91/91 to 0/91 without syscall features). |
+| `/method` | Dataset, tiers, features, detectors, evaluation protocol, overhead and limitations. `/methodology` redirects here. |
+
+All numbers come from static JSON in `web/public/data/`, produced from the frozen detectors and the committed result tables. To rebuild it (needs the dataset in `data/collect1/`, step 2 of the reproduce section above; it verifies the frozen model hashes first and only reads results):
+
+```sh
+.venv/Scripts/python -m ml.export_web          # writes web/public/data/ (~4 MB)
+```
+
+To run the site locally (Node.js 20+):
+
+```sh
+cd web
+npm ci
+npm run dev        # http://localhost:3000
+npm run build      # static export to web/out/ (what Vercel serves)
+```
+
+Pushing to `main` redeploys the site on Vercel.
 
 ## Phase 4: evaluation and demo
 

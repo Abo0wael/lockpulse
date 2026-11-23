@@ -25,9 +25,9 @@ export default function WaitForGraph({ run, timeMs }: WaitForGraphProps) {
         <div><h2 id="wait-graph-title" className="font-semibold">Wait-for graph</h2><p className="mt-1 text-xs text-muted">Tier F synchronization snapshot at or before the cursor.</p></div>
         <span className="rounded-full border border-border px-2.5 py-1 font-mono text-[11px] text-muted">{run.tierF.graphGranularity}</span>
       </div>
-      {!snapshot ? <p className="mt-5 rounded-lg border border-dashed border-border p-4 text-sm text-muted">No graph snapshot has been recorded by {formatMs(timeMs, 2)}.</p> : (
+      {!snapshot ? <p className="mt-5 rounded-lg border border-dashed border-border p-4 text-sm text-muted">No graph snapshot has been recorded by {formatMs(timeMs)}.</p> : (
         <div className="mt-4 space-y-2" aria-live="polite">
-          <p className="font-mono text-[11px] text-secondary">Snapshot · {formatMs(snapshot[0], 2)}{cycle.size > 0 && <span className="ml-2 text-danger">CYCLE: {Array.from(cycle).join(" → ")}</span>}</p>
+          <p className="font-mono text-[11px] text-secondary">Snapshot · {formatMs(snapshot[0])}{cycle.size > 0 && <span className="ml-2 text-danger">cycle: {[...Array.from(cycle), Array.from(cycle)[0]].map((t) => `T${t}`).join(" → ")}</span>}</p>
           {waiting.length === 0 && held.length === 0 ? <p className="rounded-lg bg-background px-3 py-4 text-sm text-muted">No active waits or held locks in this snapshot.</p> : (
             <ul className="space-y-2">
               {waiting.map(([tid, objectIndex, kind], i) => {

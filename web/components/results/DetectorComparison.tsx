@@ -1,5 +1,6 @@
 import type { ResultRow } from "@/lib/types";
 import { formatMs, formatPercent } from "@/lib/utils";
+import { formatSetting } from "@/lib/results";
 
 const headings = ["Detector", "Input", "Setting", "Detected hangs", "Median delay", "False alarms", "PR-AUC"];
 
@@ -19,13 +20,13 @@ export default function DetectorComparison({ rows }: { rows: ResultRow[] }) {
           <tbody>
             {rows.map((row) => (
               <tr key={`${row.detector}-${row.setting}`} className="border-t border-border/70 transition-colors hover:bg-elevated/40">
-                <td className="px-4 py-3.5 font-semibold first:pl-5"><span className="mr-2 rounded-md border border-secondary/20 bg-secondary/5 px-2 py-1 font-mono text-xs text-secondary">{row.detector}</span>{row.name}</td>
+                <td className="px-4 py-3.5 font-semibold first:pl-5"><span className="mr-2 rounded-md border border-secondary/20 bg-secondary/5 px-2 py-1 font-mono text-xs text-secondary">{row.detector}</span> {row.name}</td>
                 <td className="px-4 py-3.5 text-muted">{row.input}</td>
-                <td className="px-4 py-3.5 font-mono text-xs text-muted">{row.setting}</td>
+                <td className="px-4 py-3.5 font-mono text-xs text-muted">{formatSetting(row)}</td>
                 <td className="px-4 py-3.5 tabular-nums">{row.detected}/{row.hangRuns} <span className="text-xs text-muted">({formatPercent(row.detectionRate)})</span></td>
                 <td className="px-4 py-3.5 font-mono text-xs tabular-nums">{formatMs(row.delayMedianMs)}</td>
                 <td className="px-4 py-3.5 tabular-nums">{row.faHealthy}</td>
-                <td className="px-4 py-3.5 font-mono text-xs tabular-nums" title={row.prAuc == null ? "Not defined for this row" : `Precision-recall area: ${row.prAuc}`}>{row.prAuc?.toFixed(4) ?? "—"}</td>
+                <td className="px-4 py-3.5 font-mono text-xs tabular-nums" title={row.prAuc == null ? "Not defined for this row" : `Precision-recall area: ${row.prAuc}`}>{row.prAuc?.toFixed(3) ?? "—"}</td>
               </tr>
             ))}
           </tbody>

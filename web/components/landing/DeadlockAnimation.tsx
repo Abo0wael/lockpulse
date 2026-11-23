@@ -48,7 +48,6 @@ function ThreadNode({
   pulseActive: boolean;
   reduceMotion: boolean;
 }) {
-  const tone = isWaiting ? "danger" : "success";
   const description = isWaiting ? "BLOCKED · FUTEX" : holdsLock ? "RUNNING · LOCK HELD" : "RUNNING · MAKING PROGRESS";
 
   return (
@@ -69,7 +68,7 @@ function ThreadNode({
       <div className="min-w-0">
         <p className="text-base font-semibold tracking-tight text-text sm:text-lg">{isWaiting ? "Waiting on a lock" : "Worker thread"}</p>
         <p className={`mt-1.5 font-mono text-xs font-medium tracking-[0.06em] sm:text-[13px] ${isWaiting ? "text-danger" : "text-success"}`}>
-          <span className="sr-only">{tone} status: </span>{description}
+          <span className="sr-only">Status: </span>{description}
         </p>
       </div>
     </motion.div>

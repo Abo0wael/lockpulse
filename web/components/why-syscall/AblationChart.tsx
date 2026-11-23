@@ -24,7 +24,7 @@ export default function AblationChart() {
           <div role="group" aria-label="Choose detector model" className="mt-7 flex border-b border-border">
             {Object.keys(models).map((id) => {
               const key = id as keyof typeof models;
-              return <button key={id} type="button" aria-pressed={model === key} onClick={() => setModel(key)} className={`min-h-11 border-b-2 px-4 font-mono text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary ${model === key ? "border-primary text-text" : "border-transparent text-muted hover:text-text"}`}>{id}<span className="ml-2 font-sans font-normal">{models[key].label}</span></button>;
+              return <button key={id} type="button" aria-pressed={model === key} onClick={() => setModel(key)} className={`min-h-11 border-b-2 px-4 font-mono text-xs font-semibold transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary ${model === key ? "border-primary text-text" : "border-transparent text-muted hover:text-text"}`}>{id}{" "}<span className="ml-2 font-sans font-normal">{models[key].label}</span></button>;
             })}
           </div>
           <div className="mt-6 flex items-start gap-3 border-l border-secondary/50 pl-4">

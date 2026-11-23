@@ -11,7 +11,7 @@ import DetectorComparison from "@/components/results/DetectorComparison";
 import DelayChart from "@/components/results/DelayChart";
 import { loadResults, overallRows } from "@/lib/data";
 import type { ResultRow } from "@/lib/types";
-import { formatPercent } from "@/lib/utils";
+import { familyLabel, formatPercent } from "@/lib/utils";
 
 export default function ResultsPage() {
   const reduceMotion = useReducedMotion();
@@ -102,35 +102,39 @@ export default function ResultsPage() {
                       <div className="flex items-start justify-between gap-4">
                         <div>
                           <h2 className="font-semibold">Per-family detection</h2>
-                          <p className="mt-1 text-sm text-muted">Observed detection rate and hang-run count.</p>
+                          <p className="mt-1 text-sm text-muted">Detection rate on hang runs (B2, M2, M3); false alarms for the healthy-only family.</p>
                         </div>
                         <span className="rounded-lg border border-border bg-background p-2 font-mono text-xs text-secondary">{families.length} FAMILIES</span>
                       </div>
                       <div className="mt-5 max-h-[440px] space-y-4 overflow-auto pr-1">
                         {families.map((family) => {
-                          const familyRows = rows.filter(
-                            (row) => row.scope === family && ["B2", "M2", "M3"].includes(row.detector),
-                          );
+                          const allRows = rows.filter((row) => row.scope === family);
+                          const healthyOnly = allRows.every((row) => row.hangRuns === 0);
+                          // a healthy-only family (blocked_on_io) has no hangs to detect: show false alarms per detector instead
+                          const familyRows = healthyOnly ? allRows : allRows.filter((row) => ["B2", "M2", "M3"].includes(row.detector));
                           return (
                             <div key={family} className="border-b border-border/70 pb-4 last:border-0">
-                              <h3 className="mb-3 text-sm font-medium capitalize">{family.replaceAll("_", " ")}</h3>
+                              <h3 className="mb-3 text-sm font-medium">{familyLabel(family)}{healthyOnly && " "}{healthyOnly && <span className="ml-2 text-xs font-normal text-muted">healthy runs only · false alarms per detector ({allRows[0]?.runs ?? 0} runs)</span>}</h3>
                               <div className="grid gap-2.5">
-                                {familyRows.map((row) => (
+                                {familyRows.map((row) => {
+                                  const value = healthyOnly ? (row.runs ? row.faHealthy / row.runs : 0) : row.detectionRate ?? 0;
+                                  return (
                                   <div key={row.detector} className="flex items-center gap-2 text-xs">
                                     <span className="w-8 font-mono font-semibold text-secondary">{row.detector}</span>
                                     <div className="h-2 flex-1 overflow-hidden rounded-full bg-background">
                                       <motion.div
-                                        className="h-full rounded-full bg-gradient-to-r from-success/70 to-success"
+                                        className={`h-full rounded-full bg-gradient-to-r ${healthyOnly ? "from-danger/70 to-danger" : "from-success/70 to-success"}`}
                                         initial={{ width: 0 }}
-                                        animate={{ width: `${(row.detectionRate ?? 0) * 100}%` }}
+                                        animate={{ width: `${value * 100}%` }}
                                         transition={{ duration: 0.65, ease: "easeOut" }}
                                       />
                                     </div>
-                                    <span className="w-28 text-right tabular-nums text-muted">
-                                      {row.detected}/{row.hangRuns} · {formatPercent(row.detectionRate)}
+                                    <span className="w-32 text-right tabular-nums text-muted">
+                                      {healthyOnly ? `${row.faHealthy} false alarm${row.faHealthy === 1 ? "" : "s"}` : `${row.detected}/${row.hangRuns} · ${formatPercent(row.detectionRate)}`}
                                     </span>
                                   </div>
-                                ))}
+                                  );
+                                })}
                               </div>
                             </div>
                           );
