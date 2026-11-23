@@ -23,28 +23,25 @@ export default function ResultsOverview({ rows }: { rows: ResultRow[] }) {
   ];
 
   return (
-    <div className="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+    <dl className="lp-results-metric-grid" aria-label="Summary benchmark metrics">
       {cards.map((card, index) => {
         const Icon = icons[index];
         return (
-          <motion.article
+          <motion.div
             key={card.label}
-            whileHover={reduceMotion ? undefined : { y: -4 }}
-            transition={{ type: "spring", stiffness: 360, damping: 28 }}
-            className="group relative overflow-hidden rounded-2xl border border-border bg-surface/80 p-5 shadow-lg shadow-black/10"
+            whileHover={reduceMotion ? undefined : { y: -2 }}
+            transition={{ duration: 0.18 }}
+            className={`group min-w-0 border-b border-border px-4 py-5 transition-colors hover:bg-elevated/45 sm:px-6 sm:py-6 xl:border-b-0 xl:border-r xl:px-7 ${index % 2 === 0 ? "border-r" : ""} ${index === 3 ? "xl:border-r-0" : ""}`}
           >
-            <span aria-hidden="true" className="absolute inset-x-0 top-0 h-px bg-gradient-to-r from-transparent via-secondary/60 to-transparent opacity-0 transition-opacity group-hover:opacity-100" />
-            <div className="flex items-start justify-between gap-3">
-              <div>
-                <p className="text-xs font-medium text-muted">{card.label}</p>
-                <p className="mt-3 text-2xl font-bold tracking-tight tabular-nums text-text sm:text-3xl">{card.value}</p>
-              </div>
-              <span className="rounded-xl border border-border bg-background p-2.5 text-secondary transition-colors group-hover:border-secondary/30 group-hover:bg-secondary/5"><Icon aria-hidden="true" size={18} /></span>
+            <div className="flex items-center justify-between gap-3">
+              <dt className="text-sm font-semibold leading-5 text-muted">{card.label}</dt>
+              <Icon aria-hidden="true" size={17} className="shrink-0 text-secondary" />
             </div>
-            <p className="mt-3 border-t border-border pt-3 text-xs text-muted">{card.detail}</p>
-          </motion.article>
+            <dd className="mt-5 lp-results-metric-value font-bold text-text">{card.value}</dd>
+            <dd className="mt-3 text-sm leading-6 text-muted">{card.detail}</dd>
+          </motion.div>
         );
       })}
-    </div>
+    </dl>
   );
 }

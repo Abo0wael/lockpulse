@@ -20,10 +20,10 @@ export default function WaitForGraph({ run, timeMs }: WaitForGraphProps) {
   const ownerFor = new Map(held.map(([objectIndex, tid]) => [objectIndex, tid]));
 
   return (
-    <section className="rounded-xl border border-border bg-surface p-4 sm:p-5" aria-labelledby="wait-graph-title">
+    <section className="lp-panel-interactive rounded-2xl border border-border bg-surface p-4 sm:p-5" aria-labelledby="wait-graph-title">
       <div className="flex flex-wrap items-start justify-between gap-2">
         <div><h2 id="wait-graph-title" className="font-semibold">Wait-for graph</h2><p className="mt-1 text-xs text-muted">Tier F synchronization snapshot at or before the cursor.</p></div>
-        <span className="rounded-full border border-border px-2.5 py-1 font-mono text-[10px] text-muted">{run.tierF.graphGranularity}</span>
+        <span className="rounded-full border border-border px-2.5 py-1 font-mono text-[11px] text-muted">{run.tierF.graphGranularity}</span>
       </div>
       {!snapshot ? <p className="mt-5 rounded-lg border border-dashed border-border p-4 text-sm text-muted">No graph snapshot has been recorded by {formatMs(timeMs, 2)}.</p> : (
         <div className="mt-4 space-y-2" aria-live="polite">

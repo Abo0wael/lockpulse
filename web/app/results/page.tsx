@@ -39,13 +39,13 @@ export default function ResultsPage() {
       <Navbar />
       <main className="flex-1 bg-background text-text">
         <PageHeader
-          eyebrow="BENCHMARK EVALUATION"
+          eyebrow="Benchmark evaluation"
           title="Performance you can inspect."
           description="Compare detection rate, alert delay, false alarms, and precision–recall performance across frozen detector configurations."
           tone="green"
         />
 
-        <div className="mx-auto max-w-7xl space-y-7 px-5 py-8 sm:px-6 sm:py-10">
+        <div className="lp-container space-y-8 py-10 sm:py-12 lg:py-14">
           <div className="flex flex-col gap-4 rounded-2xl border border-border bg-surface/55 p-4 sm:flex-row sm:items-center sm:justify-between sm:p-5">
             <div>
               <p className="text-sm font-semibold">Choose an evaluation split</p>
@@ -98,7 +98,7 @@ export default function ResultsPage() {
                 <div className="grid gap-5 xl:grid-cols-2">
                   <Reveal><DelayChart rows={primaryRows} /></Reveal>
                   <Reveal delay={0.06}>
-                    <section className="h-full rounded-2xl border border-border bg-surface/80 p-5 shadow-lg shadow-black/10">
+                    <section className="lp-panel-interactive h-full rounded-2xl border border-border bg-surface/80 p-5 shadow-lg shadow-black/10">
                       <div className="flex items-start justify-between gap-4">
                         <div>
                           <h2 className="font-semibold">Per-family detection</h2>
