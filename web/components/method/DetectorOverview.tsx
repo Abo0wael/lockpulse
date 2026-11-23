@@ -1,7 +1,6 @@
 "use client";
 
 import { useState } from "react";
-import { motion, useReducedMotion } from "framer-motion";
 import { BrainCircuit, GitBranch, Gauge, Radio } from "lucide-react";
 
 const detectors = [
@@ -16,38 +15,66 @@ const detectors = [
 
 type Filter = "all" | "P" | "F";
 
+const tiers = [
+  { id: "P", name: "Partial process view", summary: "Sampled /proc telemetry · inputs to rules and ML", tone: "primary" },
+  { id: "F", name: "Full synchronization trace", summary: "Trace-derived labels and baselines · never an ML input", tone: "secondary" },
+] as const;
+
 export default function DetectorOverview() {
   const [filter, setFilter] = useState<Filter>("all");
-  const reduceMotion = useReducedMotion() ?? false;
-  const visible = detectors.filter((detector) => filter === "all" || detector.tier === filter);
+  const visibleTiers = tiers.filter((tier) => filter === "all" || filter === tier.id);
 
   return (
     <div>
       <div className="mb-5 flex flex-wrap items-center justify-between gap-4 border-b border-border pb-4">
-        <p className="max-w-xl text-sm leading-6 text-muted">Tier P powers the sampled rules and all ML models. Tier F is reserved for trace-derived rules and the graph baseline.</p>
-        <div role="group" aria-label="Filter detectors by telemetry tier" className="flex border border-border bg-surface/50 p-1">
-          {([{ key: "all", label: "All" }, { key: "P", label: "Tier P" }, { key: "F", label: "Tier F" }] as const).map((item) => <button key={item.key} type="button" aria-pressed={filter === item.key} onClick={() => setFilter(item.key)} className={`min-h-9 px-3 font-mono text-[10px] transition-colors focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary ${filter === item.key ? "bg-primary/15 text-text" : "text-muted hover:text-text"}`}>{item.label}</button>)}
+        <p className="max-w-2xl text-sm leading-6 text-muted">Compare each detector by the evidence it reads and the signal it uses to decide.</p>
+        <div role="group" aria-label="Filter detectors by telemetry tier" className="flex rounded-xl border border-border bg-surface/70 p-1">
+          {([{ key: "all", label: "All detectors" }, { key: "P", label: "Tier P" }, { key: "F", label: "Tier F" }] as const).map((item) => (
+            <button key={item.key} type="button" aria-pressed={filter === item.key} onClick={() => setFilter(item.key)} className={`min-h-10 rounded-lg px-3 text-sm font-semibold focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-secondary ${filter === item.key ? "bg-primary/15 text-text" : "text-muted hover:text-text"}`}>
+              {item.label}
+            </button>
+          ))}
         </div>
       </div>
-      <div className="overflow-hidden border-y border-border">
-        <div className="hidden grid-cols-[62px_90px_1.05fr_1fr_1.7fr] gap-4 bg-[#0c0f16] px-4 py-3 font-mono text-[9px] uppercase tracking-[0.14em] text-muted md:grid md:px-5"><span>ID</span><span>Source</span><span>Class</span><span>Detector</span><span>Decision signal</span></div>
-        <div aria-live="polite" className="divide-y divide-border">
-          {visible.map((detector, index) => {
-            const Icon = detector.icon;
-            const tierP = detector.tier === "P";
-            return (
-              <motion.article key={detector.id} initial={reduceMotion ? false : { opacity: 0, x: -8 }} animate={{ opacity: 1, x: 0 }} transition={{ duration: reduceMotion ? 0 : 0.22, delay: reduceMotion ? 0 : index * 0.035 }} className="grid gap-3 px-4 py-4 transition-colors hover:bg-white/[0.02] sm:px-5 md:grid-cols-[62px_90px_1.05fr_1fr_1.7fr] md:items-center md:gap-4">
-                <span className="flex items-center gap-2 font-mono text-xs font-semibold text-primary"><Icon aria-hidden="true" className="md:hidden" size={14} />{detector.id}</span>
-                <span className={`w-fit border px-2 py-1 font-mono text-[9px] uppercase tracking-wider ${tierP ? "border-primary/25 bg-primary/[0.06] text-primary" : "border-secondary/25 bg-secondary/[0.06] text-secondary"}`}>Tier {detector.tier}</span>
-                <span className="font-mono text-[9px] uppercase tracking-[0.12em] text-muted">{detector.family}</span>
-                <span className="text-sm font-semibold text-text">{detector.method}</span>
-                <span className="text-xs leading-5 text-muted">{detector.description}</span>
-              </motion.article>
-            );
-          })}
-        </div>
+
+      <div className={`grid items-start gap-4 ${visibleTiers.length === 2 ? "lg:grid-cols-[1.45fr_1fr]" : "grid-cols-1"}`} aria-live="polite">
+        {visibleTiers.map((tier) => {
+          const entries = detectors.filter((detector) => detector.tier === tier.id);
+          const isPartial = tier.id === "P";
+
+          return (
+            <section key={tier.id} aria-labelledby={`tier-${tier.id}-title`} className={`overflow-hidden rounded-2xl border ${isPartial ? "border-primary/25 bg-primary/[0.025]" : "border-secondary/25 bg-secondary/[0.02]"}`}>
+              <header className="flex flex-wrap items-start justify-between gap-4 border-b border-border/80 px-5 py-5 sm:px-6">
+                <div>
+                  <p className={`font-mono text-xs font-semibold uppercase tracking-[0.06em] ${isPartial ? "text-primary" : "text-secondary"}`}>Tier {tier.id}</p>
+                  <h3 id={`tier-${tier.id}-title`} className="mt-2 text-xl font-semibold text-text">{tier.name}</h3>
+                  <p className="mt-1 text-sm leading-6 text-muted">{tier.summary}</p>
+                </div>
+                <span className="rounded-full border border-border bg-surface/70 px-3 py-1 font-mono text-xs text-muted">{entries.length} detectors</span>
+              </header>
+              <ul className="divide-y divide-border/80">
+                {entries.map((detector) => {
+                  const Icon = detector.icon;
+                  return (
+                    <li key={detector.id} className="grid gap-x-4 gap-y-2 px-5 py-4 sm:grid-cols-[54px_minmax(0,1fr)] sm:px-6">
+                      <span className={`flex items-center gap-2 font-mono text-sm font-semibold ${isPartial ? "text-primary" : "text-secondary"}`}><Icon aria-hidden="true" className="size-4 sm:hidden" />{detector.id}</span>
+                      <div className="min-w-0">
+                        <div className="flex flex-wrap items-baseline gap-x-3 gap-y-1">
+                          <h4 className="text-base font-semibold text-text">{detector.method}</h4>
+                          <span className="font-mono text-[11px] uppercase tracking-wide text-muted">{detector.family}</span>
+                        </div>
+                        <p className="mt-1 text-sm leading-6 text-muted">{detector.description}</p>
+                      </div>
+                    </li>
+                  );
+                })}
+              </ul>
+            </section>
+          );
+        })}
       </div>
-      <p className="mt-3 text-[10px] leading-5 text-muted">ML inputs never include Tier F events. B3 uses the full synchronization trace and is a mutex-cycle baseline, not a general hang oracle.</p>
+
+      <p className="mt-4 text-sm leading-6 text-muted">ML inputs never include Tier F events. B3 uses the full synchronization trace and is a mutex-cycle baseline, not a general hang oracle.</p>
     </div>
   );
 }

@@ -17,7 +17,7 @@ export default function StatusBadge({
   className?: string;
 }) {
   return (
-    <span className={`inline-flex items-center gap-1.5 rounded-md border px-2 py-1 font-mono text-[9px] font-semibold tracking-[0.12em] ${styles[tone]} ${className}`}>
+    <span className={`inline-flex min-h-7 items-center gap-2 rounded-md border px-2.5 py-1 font-mono text-[11px] font-semibold tracking-[0.05em] ${styles[tone]} ${className}`}>
       <span aria-hidden="true" className="h-1.5 w-1.5 rounded-full bg-current shadow-[0_0_8px_currentColor]" />
       {children}
     </span>

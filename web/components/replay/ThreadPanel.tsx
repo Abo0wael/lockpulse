@@ -17,7 +17,7 @@ const stateLabels: Record<string, string> = {
 
 export default function ThreadPanel({ run, index }: ThreadPanelProps) {
   return (
-    <section className="overflow-hidden rounded-xl border border-border bg-surface" aria-labelledby="thread-panel-title">
+    <section className="lp-panel-interactive overflow-hidden rounded-2xl border border-border bg-surface" aria-labelledby="thread-panel-title">
       <div className="flex items-center justify-between border-b border-border px-4 py-3 sm:px-5">
         <h2 id="thread-panel-title" className="font-semibold">Thread state</h2>
         <span className="text-xs text-muted">{run.live[index] ?? 0} live · {run.futex[index] ?? 0} futex</span>

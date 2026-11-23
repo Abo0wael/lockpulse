@@ -18,7 +18,7 @@ export default function Timeline({ times, index, t0Ms, onChange, alertTimes }: T
   ];
 
   return (
-    <section className="rounded-xl border border-border bg-surface p-4 sm:p-5" aria-label="Run timeline">
+    <section className="lp-panel-interactive rounded-2xl border border-border bg-surface p-4 sm:p-5" aria-label="Run timeline">
       <div className="flex flex-wrap items-center justify-between gap-2">
         <h2 className="font-semibold">Run timeline</h2>
         <p className="font-mono text-xs text-secondary">{formatMs(current, 2)} / {formatMs(duration, 2)}</p>

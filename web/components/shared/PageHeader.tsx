@@ -3,9 +3,9 @@
 import { motion, useReducedMotion } from "framer-motion";
 
 const tones = {
-  cyan: { eyebrow: "text-secondary", glow: "rgba(56,189,248,0.15)", orbit: "border-secondary/15" },
-  violet: { eyebrow: "text-primary", glow: "rgba(99,102,241,0.19)", orbit: "border-primary/20" },
-  green: { eyebrow: "text-success", glow: "rgba(52,211,153,0.13)", orbit: "border-success/15" },
+  cyan: { eyebrow: "text-secondary", glow: "rgba(66,220,232,0.09)" },
+  violet: { eyebrow: "text-primary", glow: "rgba(140,124,255,0.1)" },
+  green: { eyebrow: "text-success", glow: "rgba(69,212,131,0.08)" },
 } as const;
 
 export default function PageHeader({
@@ -24,33 +24,19 @@ export default function PageHeader({
 
   return (
     <header className="relative isolate overflow-hidden border-b border-border bg-[var(--header-background)]">
-      <div
-        aria-hidden="true"
-        className="pointer-events-none absolute inset-0 -z-10"
-        style={{ background: `radial-gradient(ellipse at 82% 18%, ${palette.glow}, transparent 45%)` }}
-      />
+      <div aria-hidden="true" className="lp-grid-field pointer-events-none absolute inset-0 -z-10 opacity-25" />
+      <div aria-hidden="true" className="pointer-events-none absolute inset-y-0 right-0 -z-10 w-[40%]" style={{ background: `radial-gradient(ellipse at 100% 0%, ${palette.glow}, transparent 68%)` }} />
       <motion.div
-        aria-hidden="true"
-        className={`pointer-events-none absolute -right-28 -top-44 -z-10 h-[27rem] w-[27rem] rounded-full border ${palette.orbit}`}
-        animate={reduceMotion ? undefined : { rotate: 360 }}
-        transition={reduceMotion ? undefined : { duration: 80, repeat: Infinity, ease: "linear" }}
-      >
-        <span className="absolute left-[18%] top-[17%] h-2 w-2 rounded-full bg-secondary shadow-[0_0_18px_rgba(56,189,248,0.9)]" />
-      </motion.div>
-      <motion.div
-        className="mx-auto max-w-7xl px-5 py-11 sm:px-6 sm:py-16 lg:py-20"
+        className="lp-container relative py-14 sm:py-18 lg:py-24"
         initial={reduceMotion ? false : { opacity: 0, y: 14 }}
         animate={{ opacity: 1, y: 0 }}
         transition={{ duration: reduceMotion ? 0 : 0.5, ease: "easeOut" }}
       >
-        <p className={`flex items-center gap-2 text-[10px] font-semibold tracking-[0.2em] sm:text-xs ${palette.eyebrow}`}>
-          <span aria-hidden="true" className="h-px w-7 bg-current" />
-          {eyebrow}
-        </p>
-        <h1 className="mt-4 max-w-4xl text-3xl font-bold leading-[1.08] tracking-[-0.035em] text-text sm:text-5xl lg:text-[3.4rem]">
+        <p className={`lp-kicker ${palette.eyebrow}`}>{eyebrow}</p>
+        <h1 className="lp-page-title mt-5 text-text">
           {title}
         </h1>
-        <p className="mt-4 max-w-3xl text-sm leading-6 text-muted sm:text-base sm:leading-7">
+        <p className="lp-page-lead mt-5">
           {description}
         </p>
       </motion.div>

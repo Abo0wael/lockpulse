@@ -10,7 +10,7 @@ export default function DetectorPanel({ run, timeMs }: DetectorPanelProps) {
   };
   const detectorIds = Object.keys(run.outcomes);
   return (
-    <section className="overflow-hidden rounded-xl border border-border bg-surface" aria-labelledby="detector-panel-title">
+    <section className="lp-panel-interactive overflow-hidden rounded-2xl border border-border bg-surface" aria-labelledby="detector-panel-title">
       <div className="border-b border-border px-4 py-3 sm:px-5"><h2 id="detector-panel-title" className="font-semibold">Detector signals</h2><p className="mt-1 text-xs text-muted">Scores and first alerts from the exported run.</p></div>
       <div className="max-h-80 divide-y divide-border/70 overflow-auto">
         {detectorIds.map((detector) => {

@@ -2,10 +2,17 @@ import type { Metadata } from "next";
 import localFont from "next/font/local";
 import "./globals.css";
 
-const plusJakarta = localFont({
+const manrope = localFont({
+  src: "../public/fonts/manrope-variable.ttf",
+  variable: "--font-manrope",
+  weight: "200 800",
+  display: "swap",
+});
+
+const plusJakartaSans = localFont({
   src: "../public/fonts/plus-jakarta-sans-latin.woff2",
-  variable: "--font-plus-jakarta",
-  weight: "400 700",
+  variable: "--font-plus-jakarta-sans",
+  weight: "400",
   display: "swap",
 });
 
@@ -29,7 +36,7 @@ export default function RootLayout({ children }: LayoutProps<"/">) {
   return (
     <html
       lang="en"
-      className={`${plusJakarta.variable} ${ibmPlexMono.variable} h-full antialiased`}
+      className={`${manrope.variable} ${plusJakartaSans.variable} ${ibmPlexMono.variable} h-full antialiased`}
       suppressHydrationWarning
     >
       <head>

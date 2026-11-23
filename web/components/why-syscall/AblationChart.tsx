@@ -15,10 +15,10 @@ export default function AblationChart() {
   const selected = models[model];
 
   return (
-    <figure className="relative overflow-hidden border-y border-border bg-[#0c0f16]">
+    <figure className="lp-panel-interactive relative overflow-hidden rounded-2xl border border-border bg-surface">
       <div className="grid lg:grid-cols-[0.72fr_1.28fr]">
         <div className="border-b border-border p-5 sm:p-8 lg:border-b-0 lg:border-r lg:p-10">
-          <p className="lp-kicker"><span className="lp-kicker-line" />Ablation / held-out test</p>
+          <p className="lp-kicker">Ablation / held-out test</p>
           <h3 className="mt-5 max-w-[13ch] text-2xl font-semibold leading-tight tracking-[-0.04em] sm:text-3xl">What changes when syscall features leave?</h3>
           <p className="mt-4 text-sm leading-6 text-muted">Select a detector to compare its frozen feature configuration with the no-syscall ablation. The ablation model was retrained and its threshold was selected on validation.</p>
           <div role="group" aria-label="Choose detector model" className="mt-7 flex border-b border-border">
@@ -35,8 +35,8 @@ export default function AblationChart() {
 
         <div className="flex flex-col justify-center p-5 sm:p-8 lg:p-10" aria-live="polite" aria-atomic="true">
           <div className="mb-7 flex items-end justify-between gap-4">
-            <div><p className="font-mono text-[9px] uppercase tracking-[0.18em] text-muted">Selected detector / {model}</p><p className="mt-1 text-lg font-semibold text-text">{selected.label}</p></div>
-            <span className="font-mono text-[10px] text-muted">0 — 91 hangs detected</span>
+            <div><p className="font-mono text-[11px] uppercase tracking-[0.07em] text-muted">Selected detector / {model}</p><p className="mt-1 text-lg font-semibold text-text">{selected.label}</p></div>
+            <span className="font-mono text-[11px] text-muted">0 — 91 hangs detected</span>
           </div>
           {[
             { label: "Syscall features included", count: selected.withFeatures, color: "bg-secondary", text: "text-secondary" },
@@ -55,10 +55,10 @@ export default function AblationChart() {
                   aria-hidden="true"
                 />
               </div>
-              <div className="mt-2 flex justify-between font-mono text-[9px] text-muted"><span>0</span><span>91</span></div>
+              <div className="mt-2 flex justify-between font-mono text-[11px] text-muted"><span>0</span><span>91</span></div>
             </div>
           ))}
-          <div className="mt-8 flex items-center gap-2 border-t border-border pt-5 font-mono text-[10px] uppercase tracking-[0.12em] text-muted">
+          <div className="mt-8 flex items-center gap-2 border-t border-border pt-5 font-mono text-[11px] uppercase tracking-[0.07em] text-muted">
             <ArrowDownRight aria-hidden="true" className="text-danger" size={15} /> 91 / 91 → 0 / 91 when syscall features are removed
           </div>
         </div>
